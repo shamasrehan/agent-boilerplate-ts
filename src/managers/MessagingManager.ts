@@ -3,10 +3,8 @@ import {
   MessageConfig, 
   Message, 
   IncomingMessage, 
-  OutgoingMessage, 
-  MessageSchema 
+  OutgoingMessage 
 } from '../types';
-import { Validator } from 'jsonschema';
 import { v4 as uuidv4 } from 'uuid';
 import { EventEmitter } from 'events';
 
@@ -17,9 +15,6 @@ export class MessagingManager extends EventEmitter {
   private connection: any = null;
   private channel: any = null;
   private config: MessageConfig;
-  private incomingSchemas: Map<string, MessageSchema> = new Map();
-  private outgoingSchemas: Map<string, MessageSchema> = new Map();
-  private validator: Validator;
   private isConnected: boolean = false;
 
   /**
@@ -29,7 +24,6 @@ export class MessagingManager extends EventEmitter {
   constructor(config: MessageConfig) {
     super();
     this.config = config;
-    this.validator = new Validator();
   }
 
   /**
@@ -38,7 +32,7 @@ export class MessagingManager extends EventEmitter {
    */
   public async initialize(url: string): Promise<void> {
     try {
-      console.log(`Attempting to connect to RabbitMQ with URL: ${url}`);
+      console.log(`Connecting to RabbitMQ with URL: ${url}`);
       this.connection = await amqp.connect(url);
       console.log('Successfully connected to RabbitMQ');
       
@@ -85,22 +79,6 @@ export class MessagingManager extends EventEmitter {
   }
 
   /**
-   * Register a schema for validating incoming messages
-   * @param schema The schema to register
-   */
-  public registerIncomingSchema(schema: MessageSchema): void {
-    this.incomingSchemas.set(schema.name, schema);
-  }
-
-  /**
-   * Register a schema for validating outgoing messages
-   * @param schema The schema to register
-   */
-  public registerOutgoingSchema(schema: MessageSchema): void {
-    this.outgoingSchemas.set(schema.name, schema);
-  }
-
-  /**
    * Consume messages from the incoming queue
    */
   private setupConsumer(): void {
@@ -124,21 +102,6 @@ export class MessagingManager extends EventEmitter {
             metadata: messageContent.metadata,
             replyTo: msg.properties.replyTo
           };
-
-          // Validate message if schema exists
-          const schema = this.incomingSchemas.get(message.type);
-          if (schema) {
-            const validationResult = this.validator.validate(message.payload, schema.schema);
-            if (!validationResult.valid) {
-              console.error(`Invalid message format for type ${message.type}:`, validationResult.errors);
-              this.sendAcknowledgment(message.id, 'error', {
-                error: 'Invalid message format',
-                details: validationResult.errors
-              });
-              this.channel.ack(msg);
-              return;
-            }
-          }
 
           // Acknowledge receipt of message to RabbitMQ
           this.channel.ack(msg);
@@ -186,15 +149,6 @@ export class MessagingManager extends EventEmitter {
   ): Promise<string> {
     if (!this.channel || !this.isConnected) {
       throw new Error('Not connected to message broker');
-    }
-
-    // Validate outgoing message if schema exists
-    const schema = this.outgoingSchemas.get(type);
-    if (schema) {
-      const validationResult = this.validator.validate(payload, schema.schema);
-      if (!validationResult.valid) {
-        throw new Error(`Invalid outgoing message format for type ${type}: ${validationResult.errors}`);
-      }
     }
 
     const message: OutgoingMessage = {

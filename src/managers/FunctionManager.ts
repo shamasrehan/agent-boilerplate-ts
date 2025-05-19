@@ -7,7 +7,6 @@ dotenv.config();
 
 /**
  * Function Manager class to manage local and cloud functions
- * Provides mechanisms to register, execute, and manage API keys for functions
  */
 export class FunctionManager {
   private registry: FunctionRegistry = {};
@@ -37,7 +36,7 @@ export class FunctionManager {
             }
           }
         } catch (error) {
-          console.error(`Error parsing API keys for ${key}: ${error}`);
+          console.error(`Error parsing API keys for ${key}:`, error);
         }
       }
     });
@@ -69,27 +68,59 @@ export class FunctionManager {
    */
   public loadFunctionsFromDirectory(dirPath: string): void {
     try {
-      const files = fs.readdirSync(dirPath);
+      const fullPath = path.join(__dirname, '..', dirPath);
+      console.log(`Loading functions from directory: ${fullPath}`);
+      
+      if (!fs.existsSync(fullPath)) {
+        console.warn(`Functions directory ${fullPath} does not exist`);
+        return;
+      }
+      
+      const files = fs.readdirSync(fullPath);
       
       for (const file of files) {
-        if (file.endsWith('.js')) {  // Only load .js files
-          const filePath = path.join(dirPath, file);
-          // Using dynamic import to load the modules
-          import(filePath).then((module) => {
+        // Only load actual implementation files, not type definitions or index
+        if ((file.endsWith('.js') || file.endsWith('.ts')) && 
+            !file.endsWith('.d.ts') && 
+            file !== 'index.js' && 
+            file !== 'index.ts') {
+          
+          const filePath = path.join(fullPath, file);
+          console.log(`Attempting to load function from: ${filePath}`);
+          
+          try {
+            // Use a try-catch for each file to avoid one bad file stopping all loading
+            // For TypeScript support during development
+            let modulePath = path.relative(__dirname, filePath);
+            // Ensure path starts with ./ or ../
+            if (!modulePath.startsWith('.')) {
+              modulePath = `./${modulePath}`;
+            }
+            
+            // Remove file extension for require
+            modulePath = modulePath.replace(/\.(js|ts)$/, '');
+            
+            console.log(`Requiring module from: ${modulePath}`);
+            const module = require(modulePath);
+            
             if (module.default && typeof module.default === 'function') {
               // If the module exports a registration function
+              console.log(`Registering function using default export from ${file}`);
               module.default(this);
             } else if (module.functionDefinition) {
               // If the module exports a function definition directly
+              console.log(`Registering function definition from ${file}`);
               this.registerFunction(module.functionDefinition);
+            } else {
+              console.warn(`Module ${file} does not export a function registration or definition`);
             }
-          }).catch((error) => {
-            console.error(`Error loading function from ${filePath}: ${error}`);
-          });
+          } catch (error) {
+            console.error(`Error loading function from ${filePath}:`, error);
+          }
         }
       }
     } catch (error) {
-      console.error(`Error loading functions from directory ${dirPath}: ${error}`);
+      console.error(`Error loading functions from directory ${dirPath}:`, error);
     }
   }
 
@@ -116,33 +147,14 @@ export class FunctionManager {
   }
 
   /**
-   * Remove a function from the registry
-   * @param name Name of the function to remove
-   */
-  public unregisterFunction(name: string): boolean {
-    if (this.registry[name]) {
-      delete this.registry[name];
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get available API keys for a specific service
-   * @param apiKeyName Name of the API key service
-   */
-  public getApiKeys(apiKeyName: string): string[] {
-    const normalizedName = apiKeyName.toLowerCase();
-    return this.apiKeys[normalizedName] || [];
-  }
-
-  /**
    * Get a specific API key by name and index
    * @param apiKeyName Name of the API key service
    * @param index Index of the specific key to retrieve
    */
   public getApiKey(apiKeyName: string, index: number = 0): string | undefined {
-    const keys = this.getApiKeys(apiKeyName);
+    const normalizedName = apiKeyName.toLowerCase();
+    const keys = this.apiKeys[normalizedName] || [];
+    
     if (keys.length > 0) {
       return keys[index % keys.length]; // Cycle through keys if index is out of bounds
     }
@@ -151,9 +163,9 @@ export class FunctionManager {
 
   /**
    * Execute a function by name with provided parameters
-   * @param name Name of the function to execute
-   * @param params Parameters to pass to the function
-   * @param context Context object with additional information
+   * @param name Function name
+   * @param params Function parameters
+   * @param context Optional execution context
    */
   public async executeFunction(
     name: string,
