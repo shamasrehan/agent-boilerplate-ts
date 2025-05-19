@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,16 +13,19 @@
       display: flex;
       flex-direction: column;
     }
+
     .container {
       flex: 1;
       display: flex;
       flex-direction: column;
     }
+
     .main-content {
       flex: 1;
       display: flex;
       min-height: 0;
     }
+
     .message-input {
       position: sticky;
       bottom: 0;
@@ -29,6 +33,7 @@
       padding: 15px 0;
       border-top: 1px solid #dee2e6;
     }
+
     .message-container {
       flex: 1;
       overflow-y: auto;
@@ -38,6 +43,7 @@
       margin-right: 10px;
       height: 100%;
     }
+
     .response-container {
       flex: 1;
       overflow-y: auto;
@@ -48,20 +54,25 @@
       height: 100%;
       background-color: #f8f9fa;
     }
+
     .message {
       margin-bottom: 10px;
       padding: 10px;
       border-radius: 5px;
     }
+
     .user-message {
       background-color: #e9ecef;
     }
+
     .agent-message {
       background-color: #d1e7dd;
     }
+
     .error-message {
       background-color: #f8d7da;
     }
+
     pre {
       background-color: #f8f9fa;
       padding: 10px;
@@ -70,64 +81,219 @@
       max-height: 300px;
       overflow-y: auto;
     }
+
     #json-input {
       resize: vertical;
       min-height: 100px;
       font-family: monospace;
     }
+
+    .tab-content {
+      padding-top: 15px;
+    }
+
+    .model-select {
+      margin-bottom: 10px;
+    }
+
+    .model-options {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .model-options-toggle {
+      margin-left: 10px;
+    }
+
+    .model-options-container {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    .model-options-container.show {
+      max-height: 500px;
+    }
+
+    .nav-tabs .nav-link.active {
+      font-weight: bold;
+      background-color: #f0f0f0;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <h1 class="text-center mb-4">AI Agent Test Interface</h1>
-    
-    <div class="main-content mb-4">
+
+    <ul class="nav nav-tabs" id="mainTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button"
+          role="tab" aria-selected="true">Chat</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="function-tab" data-bs-toggle="tab" data-bs-target="#function" type="button"
+          role="tab" aria-selected="false">Functions</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="master-model-tab" data-bs-toggle="tab" data-bs-target="#master-model" type="button"
+          role="tab" aria-selected="false">Master Model</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button"
+          role="tab" aria-selected="false">Advanced</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="mainTabContent">
+      <!-- Chat Tab -->
+      <div class="tab-pane fade show active" id="chat" role="tabpanel" aria-labelledby="chat-tab">
+        <div class="model-select">
+          <label for="chat-model-select" class="form-label">Select Model:</label>
+          <select class="form-select" id="chat-model-select">
+            <option value="">Default Model</option>
+            <option value="masterModel">Master Model</option>
+            <option value="textAnalysisModel">Text Analysis Model</option>
+          </select>
+        </div>
+
+        <div class="model-options">
+          <button class="btn btn-sm btn-outline-secondary model-options-toggle" type="button" data-bs-toggle="collapse"
+            data-bs-target="#chatModelOptions">
+            Model Options
+          </button>
+          <div class="collapse" id="chatModelOptions">
+            <div class="card card-body mt-2">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label for="chat-temperature" class="form-label">Temperature:</label>
+                  <input type="range" class="form-range" id="chat-temperature" min="0" max="1" step="0.1" value="0.7">
+                  <span id="chat-temperature-value">0.7</span>
+                </div>
+                <div class="col-md-4">
+                  <label for="chat-max-tokens" class="form-label">Max Tokens:</label>
+                  <input type="number" class="form-control" id="chat-max-tokens" value="2048">
+                </div>
+                <div class="col-md-4">
+                  <label for="chat-system-prompt" class="form-label">System Prompt:</label>
+                  <input type="text" class="form-control" id="chat-system-prompt" placeholder="Custom system prompt">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Function Tab -->
+      <div class="tab-pane fade" id="function" role="tabpanel" aria-labelledby="function-tab">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="function-select" class="form-label">Select Function:</label>
+            <select class="form-select" id="function-select">
+              <option value="getWeather">getWeather</option>
+              <option value="analyzeText">analyzeText</option>
+              <option value="processWebhook">processWebhook</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="function-model-select" class="form-label">Function Model (optional):</label>
+            <select class="form-select" id="function-model-select">
+              <option value="">Function Default</option>
+              <option value="masterModel">Master Model</option>
+              <option value="textAnalysisModel">Text Analysis Model</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="function-params" class="form-label">Parameters (JSON):</label>
+          <textarea class="form-control" id="function-params" rows="5"
+            placeholder='{"param1": "value1", "param2": "value2"}'></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="function-context" class="form-label">Context (optional JSON):</label>
+          <textarea class="form-control" id="function-context" rows="3" placeholder='{"userId": "user123"}'></textarea>
+        </div>
+      </div>
+
+      <!-- Master Model Tab -->
+      <div class="tab-pane fade" id="master-model" role="tabpanel" aria-labelledby="master-model-tab">
+        <div class="mb-3">
+          <label for="master-model-message-type" class="form-label">Message Type:</label>
+          <input type="text" class="form-control" id="master-model-message-type" value="user:query">
+        </div>
+        <div class="mb-3">
+          <label for="master-model-content" class="form-label">Message Content:</label>
+          <textarea class="form-control" id="master-model-content" rows="5"
+            placeholder="Enter message content to analyze"></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="master-model-metadata" class="form-label">Metadata (optional JSON):</label>
+          <textarea class="form-control" id="master-model-metadata" rows="3"
+            placeholder='{"userId": "user123"}'></textarea>
+        </div>
+      </div>
+
+      <!-- Advanced Tab -->
+      <div class="tab-pane fade" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
+        <div class="form-check form-check-inline mb-3">
+          <input class="form-check-input" type="radio" name="advancedInputType" id="advancedTextInput" value="text"
+            checked>
+          <label class="form-check-label" for="advancedTextInput">Text Input</label>
+        </div>
+        <div class="form-check form-check-inline mb-3">
+          <input class="form-check-input" type="radio" name="advancedInputType" id="advancedJsonInput" value="json">
+          <label class="form-check-label" for="advancedJsonInput">JSON Input</label>
+        </div>
+
+        <div id="advanced-text-input-container">
+          <div class="input-group mb-3">
+            <input type="text" class="form-control" id="advanced-text-input" placeholder="Enter message...">
+            <button class="btn btn-primary" id="send-advanced-text">Send</button>
+          </div>
+        </div>
+
+        <div id="advanced-json-input-container" style="display: none;">
+          <textarea class="form-control mb-3" id="advanced-json-input"
+            placeholder='{"type": "function", "name": "getWeather", "params": {"city": "New York"}}'></textarea>
+          <div class="d-flex justify-content-between">
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Templates
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-template="function">Function Call</a></li>
+                <li><a class="dropdown-item" href="#" data-template="function-model">Function with Model</a></li>
+                <li><a class="dropdown-item" href="#" data-template="job">Schedule Job</a></li>
+                <li><a class="dropdown-item" href="#" data-template="function-job">Schedule Function Job</a></li>
+                <li><a class="dropdown-item" href="#" data-template="message">Send Message</a></li>
+                <li><a class="dropdown-item" href="#" data-template="llm">LLM Query</a></li>
+                <li><a class="dropdown-item" href="#" data-template="llm-model">LLM Query with Model</a></li>
+                <li><a class="dropdown-item" href="#" data-template="master-analyze">Master Model Analyze</a></li>
+              </ul>
+            </div>
+            <button class="btn btn-primary" id="send-advanced-json">Send JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content mb-4 mt-3">
       <div class="message-container" id="message-container">
         <h4>Messages</h4>
         <div id="messages"></div>
       </div>
-      
+
       <div class="response-container">
         <h4>Response</h4>
         <pre id="response">No response yet</pre>
       </div>
     </div>
-    
+
     <div class="message-input">
-      <div class="mb-3">
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" name="inputType" id="textInput" value="text" checked>
-          <label class="form-check-label" for="textInput">Text Input</label>
-        </div>
-        <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" name="inputType" id="jsonInput" value="json">
-          <label class="form-check-label" for="jsonInput">JSON Input</label>
-        </div>
-      </div>
-      
-      <div id="text-input-container">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" id="text-input" placeholder="Enter message...">
-          <button class="btn btn-primary" id="send-text">Send</button>
-        </div>
-      </div>
-      
-      <div id="json-input-container" style="display: none;">
-        <textarea class="form-control mb-3" id="json-input" placeholder='{"type": "function", "name": "getWeather", "params": {"city": "New York"}}'></textarea>
-        <div class="d-flex justify-content-between">
-          <div class="btn-group">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Templates
-            </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#" data-template="function">Function Call</a></li>
-              <li><a class="dropdown-item" href="#" data-template="job">Schedule Job</a></li>
-              <li><a class="dropdown-item" href="#" data-template="message">Send Message</a></li>
-              <li><a class="dropdown-item" href="#" data-template="llm">LLM Query</a></li>
-            </ul>
-          </div>
-          <button class="btn btn-primary" id="send-json">Send JSON</button>
-        </div>
+      <div class="input-group">
+        <input type="text" class="form-control" id="text-input" placeholder="Enter message...">
+        <button class="btn btn-primary" id="send-text">Send</button>
       </div>
     </div>
   </div>
@@ -141,10 +307,24 @@
         type: 'function',
         name: 'getWeather',
         params: {
-          city: 'New York'
+          city: 'New York',
+          units: 'metric'
         },
         context: {
           userId: '12345'
+        }
+      },
+      'function-model': {
+        type: 'function',
+        name: 'analyzeText',
+        modelId: 'textAnalysisModel',
+        params: {
+          text: 'This is a sample text to analyze for sentiment and key themes.',
+          options: {
+            includeSentiment: true,
+            includeKeywords: true,
+            includeThemes: true
+          }
         }
       },
       job: {
@@ -158,6 +338,27 @@
           priority: 1,
           delay: 0,
           attempts: 3
+        }
+      },
+      'function-job': {
+        type: 'job:function',
+        functionName: 'analyzeText',
+        functionParams: {
+          text: 'Schedule this text analysis to run as a background job',
+          options: {
+            includeSentiment: true,
+            includeKeywords: true,
+            includeThemes: true
+          }
+        },
+        options: {
+          priority: 2,
+          delay: 5000,  // 5 seconds delay
+          attempts: 3
+        },
+        functionContext: {
+          source: 'scheduled-job',
+          userId: 'user123'
         }
       },
       message: {
@@ -174,41 +375,86 @@
         }
       },
       llm: {
-        text: 'Tell me a short story about AI agents',
+        type: 'llm:completion',
+        prompt: 'Tell me a short story about AI agents',
         options: {
           temperature: 0.8,
           maxTokens: 500
         }
+      },
+      'llm-model': {
+        type: 'llm:model',
+        prompt: 'Analyze the sentiment of the following text: The service was excellent and the staff was friendly.',
+        modelId: 'textAnalysisModel',
+        options: {
+          temperature: 0.3,
+          maxTokens: 1000
+        }
+      },
+      'master-analyze': {
+        type: 'llm:analyze',
+        messageType: 'user:query',
+        content: "What's the weather in London?",
+        metadata: {
+          userId: 'user123',
+          timestamp: Date.now()
+        }
       }
     };
-
     // DOM elements
     const messagesContainer = document.getElementById('messages');
     const responseContainer = document.getElementById('response');
     const textInput = document.getElementById('text-input');
-    const jsonInput = document.getElementById('json-input');
     const sendTextBtn = document.getElementById('send-text');
-    const sendJsonBtn = document.getElementById('send-json');
-    const textInputContainer = document.getElementById('text-input-container');
-    const jsonInputContainer = document.getElementById('json-input-container');
-    const textInputRadio = document.getElementById('textInput');
-    const jsonInputRadio = document.getElementById('jsonInput');
+
+    // Model selection elements
+    const chatModelSelect = document.getElementById('chat-model-select');
+    const chatTemperature = document.getElementById('chat-temperature');
+    const chatTemperatureValue = document.getElementById('chat-temperature-value');
+    const chatMaxTokens = document.getElementById('chat-max-tokens');
+    const chatSystemPrompt = document.getElementById('chat-system-prompt');
+
+    // Function tab elements
+    const functionSelect = document.getElementById('function-select');
+    const functionModelSelect = document.getElementById('function-model-select');
+    const functionParams = document.getElementById('function-params');
+    const functionContext = document.getElementById('function-context');
+
+    // Master Model tab elements
+    const masterModelMessageType = document.getElementById('master-model-message-type');
+    const masterModelContent = document.getElementById('master-model-content');
+    const masterModelMetadata = document.getElementById('master-model-metadata');
+
+    // Advanced tab elements
+    const advancedTextInput = document.getElementById('advanced-text-input');
+    const advancedJsonInput = document.getElementById('advanced-json-input');
+    const sendAdvancedTextBtn = document.getElementById('send-advanced-text');
+    const sendAdvancedJsonBtn = document.getElementById('send-advanced-json');
+    const advancedTextInputContainer = document.getElementById('advanced-text-input-container');
+    const advancedJsonInputContainer = document.getElementById('advanced-json-input-container');
+    const advancedTextInputRadio = document.getElementById('advancedTextInput');
+    const advancedJsonInputRadio = document.getElementById('advancedJsonInput');
 
     // Initialize Socket.io
     const socket = io();
 
-    // Handle input type switch
-    textInputRadio.addEventListener('change', function() {
+    // Handle temperature slider
+    chatTemperature.addEventListener('input', function () {
+      chatTemperatureValue.textContent = this.value;
+    });
+
+    // Handle input type switch for Advanced tab
+    advancedTextInputRadio.addEventListener('change', function () {
       if (this.checked) {
-        textInputContainer.style.display = 'block';
-        jsonInputContainer.style.display = 'none';
+        advancedTextInputContainer.style.display = 'block';
+        advancedJsonInputContainer.style.display = 'none';
       }
     });
 
-    jsonInputRadio.addEventListener('change', function() {
+    advancedJsonInputRadio.addEventListener('change', function () {
       if (this.checked) {
-        textInputContainer.style.display = 'none';
-        jsonInputContainer.style.display = 'block';
+        advancedTextInputContainer.style.display = 'none';
+        advancedJsonInputContainer.style.display = 'block';
       }
     });
 
@@ -217,34 +463,51 @@
       item.addEventListener('click', event => {
         const templateName = event.target.getAttribute('data-template');
         if (templates[templateName]) {
-          jsonInput.value = JSON.stringify(templates[templateName], null, 2);
+          advancedJsonInput.value = JSON.stringify(templates[templateName], null, 2);
         }
         event.preventDefault();
       });
     });
 
-    // Send text message
+    // Send text message (main input)
     sendTextBtn.addEventListener('click', () => {
-      const message = textInput.value.trim();
-      if (message) {
-        sendMessage(message);
-        textInput.value = '';
-      }
+      sendChatMessage();
     });
 
     textInput.addEventListener('keypress', (event) => {
       if (event.key === 'Enter') {
-        const message = textInput.value.trim();
-        if (message) {
-          sendMessage(message);
-          textInput.value = '';
-        }
+        sendChatMessage();
       }
     });
 
-    // Send JSON message
-    sendJsonBtn.addEventListener('click', () => {
-      const json = jsonInput.value.trim();
+    // Send function execution
+    document.getElementById('function-tab').addEventListener('click', loadFunctionsList);
+
+    // Function to load available functions
+    function loadFunctionsList() {
+      // In a real implementation, you might fetch this from the server
+      // Here we're just using the hardcoded options in the select
+    }
+
+    // Send message from the active tab
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+      tab.addEventListener('click', function () {
+        // Clear the main input when switching tabs
+        textInput.value = '';
+      });
+    });
+
+    // Advanced tab handlers
+    sendAdvancedTextBtn.addEventListener('click', () => {
+      const message = advancedTextInput.value.trim();
+      if (message) {
+        sendMessage(message);
+        advancedTextInput.value = '';
+      }
+    });
+
+    sendAdvancedJsonBtn.addEventListener('click', () => {
+      const json = advancedJsonInput.value.trim();
       if (json) {
         try {
           const parsed = JSON.parse(json);
@@ -254,6 +517,80 @@
         }
       }
     });
+
+    // Function to send chat message based on chat tab settings
+    function sendChatMessage() {
+      const message = textInput.value.trim();
+      if (!message) return;
+
+      const modelId = chatModelSelect.value;
+      const activeTab = document.querySelector('.nav-link.active').id;
+
+      if (activeTab === 'chat-tab') {
+        // Handle chat tab
+        const payload = {
+          type: 'llm:model',
+          prompt: message,
+          options: {
+            temperature: parseFloat(chatTemperature.value),
+            maxTokens: parseInt(chatMaxTokens.value)
+          }
+        };
+
+        if (modelId) {
+          payload.modelId = modelId;
+        }
+
+        if (chatSystemPrompt.value.trim()) {
+          payload.options.systemPrompt = chatSystemPrompt.value.trim();
+        }
+
+        sendMessage(payload);
+      } else if (activeTab === 'function-tab') {
+        // Handle function tab
+        try {
+          const params = JSON.parse(functionParams.value || '{}');
+          const context = JSON.parse(functionContext.value || '{}');
+          const modelId = functionModelSelect.value;
+
+          const payload = {
+            type: 'function',
+            name: functionSelect.value,
+            params: params,
+            context: context
+          };
+
+          if (modelId) {
+            payload.modelId = modelId;
+          }
+
+          sendMessage(payload);
+        } catch (error) {
+          addMessage('Error parsing function parameters: ' + error.message, 'error');
+        }
+      } else if (activeTab === 'master-model-tab') {
+        // Handle master model tab
+        try {
+          const metadata = JSON.parse(masterModelMetadata.value || '{}');
+
+          const payload = {
+            type: 'llm:analyze',
+            messageType: masterModelMessageType.value,
+            content: masterModelContent.value,
+            metadata: metadata
+          };
+
+          sendMessage(payload);
+        } catch (error) {
+          addMessage('Error parsing metadata: ' + error.message, 'error');
+        }
+      } else {
+        // Default to simple text message
+        sendMessage(message);
+      }
+
+      textInput.value = '';
+    }
 
     // Send message to server
     function sendMessage(message) {
@@ -265,7 +602,7 @@
     function addMessage(message, type) {
       const messageElement = document.createElement('div');
       messageElement.className = `message ${type}-message`;
-      
+
       if (typeof message === 'object') {
         const pre = document.createElement('pre');
         pre.textContent = JSON.stringify(message, null, 2);
@@ -273,7 +610,7 @@
       } else {
         messageElement.textContent = message;
       }
-      
+
       messagesContainer.appendChild(messageElement);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -312,4 +649,5 @@
     });
   </script>
 </body>
+
 </html>

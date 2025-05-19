@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Customization</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+  <style>
+    body {
+      padding-top: 20px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    pre {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .code-editor {
+      font-family: monospace;
+      min-height: 300px;
+      resize: vertical;
+    }
+
+    .CodeMirror {
+      height: auto;
+      min-height: 300px;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+    }
+
+    .tab-content {
+      padding-top: 15px;
+    }
+
+    .list-group-item {
+      cursor: pointer;
+    }
+
+    .list-group-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .list-group-item.active {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: white;
+    }
+
+    .status-indicator {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      border-radius: 4px;
+      z-index: 1000;
+      display: none;
+    }
+
+    .status-success {
+      background-color: #d1e7dd;
+      color: #0f5132;
+      border: 1px solid #badbcc;
+    }
+
+    .status-error {
+      background-color: #f8d7da;
+      color: #842029;
+      border: 1px solid #f5c2c7;
+    }
+
+    .status-info {
+      background-color: #cff4fc;
+      color: #055160;
+      border: 1px solid #b6effb;
+    }
+
+    .badge-model {
+      background-color: #6610f2;
+      color: white;
+    }
+
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+    }
+
+    .navbar-brand i {
+      margin-right: 8px;
+    }
+
+    .back-to-agent {
+      margin-right: 15px;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 15px;
+    }
+
+    .search-box .bi-search {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-50%);
+      opacity: 0.5;
+    }
+
+    .search-box input {
+      padding-left: 30px;
+    }
+
+    .model-templates-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .model-template-card {
+      width: calc(33.333% - 10px);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .model-template-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .function-badge {
+      font-size: 0.7em;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <i class="bi bi-gear-fill"></i>
+        AI Agent Customization
+      </a>
+      <div>
+        <a href="index.html" class="btn btn-outline-light back-to-agent">
+          <i class="bi bi-arrow-left"></i> Back to Agent Interface
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="refresh-all-btn">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#help-modal">
+              <i class="bi bi-question-circle"></i> Help
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <ul class="nav nav-tabs" id="mainTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="functions-tab" data-bs-toggle="tab" data-bs-target="#functions"
+          type="button" role="tab" aria-selected="true">Manage Functions</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="models-tab" data-bs-toggle="tab" data-bs-target="#models" type="button" role="tab"
+          aria-selected="false">Manage LLM Models</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button"
+          role="tab" aria-selected="false">Agent Settings</button>
+      </li>
+    </ul>
+    <div class="tab-content" id="mainTabContent">
+      <!-- Functions Tab -->
+      <div class="tab-pane fade show active" id="functions" role="tabpanel" aria-labelledby="functions-tab">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card mb-3">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Available Functions</h5>
+                <div>
+                  <button class="btn btn-sm btn-outline-secondary" id="import-function-btn">
+                    <i class="bi bi-upload"></i> Import
+                  </button>
+                  <button class="btn btn-sm btn-primary" id="new-function-btn">
+                    <i class="bi bi-plus"></i> New
+                  </button>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="search-box p-2">
+                  <i class="bi bi-search"></i>
+                  <input type="text" class="form-control" id="function-search" placeholder="Search functions...">
+                </div>
+                <div class="list-group list-group-flush" id="function-list">
+                  <!-- Function list will be populated here -->
+                  <a href="#"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>getWeather</strong>
+                      <small class="d-block text-muted">Get weather for a specified city</small>
+                    </div>
+                    <span class="badge rounded-pill bg-primary">cloud</span>
+                  </a>
+                  <a href="#"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>analyzeText</strong>
+                      <small class="d-block text-muted">Analyze text for sentiment and themes</small>
+                    </div>
+                    <span class="badge rounded-pill bg-success">local</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Function Templates</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-grid gap-2">
+                  <button class="btn btn-outline-primary" id="template-weather-btn">Weather API</button>
+                  <button class="btn btn-outline-primary" id="template-text-analysis-btn">Text Analysis</button>
+                  <button class="btn btn-outline-primary" id="template-webhook-btn">Webhook Handler</button>
+                  <button class="btn btn-outline-primary" id="template-data-processor-btn">Data Processor</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Function Editor</h5>
+                <div>
+                  <button class="btn btn-sm btn-outline-secondary" id="export-function-btn">
+                    <i class="bi bi-download"></i> Export
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" id="test-function-btn">
+                    <i class="bi bi-play"></i> Test
+                  </button>
+                  <button class="btn btn-sm btn-success" id="save-function-btn">
+                    <i class="bi bi-save"></i> Save
+                  </button>
+                  <button class="btn btn-sm btn-danger" id="delete-function-btn">
+                    <i class="bi bi-trash"></i> Delete
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <form id="function-form">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="function-name" class="form-label">Function Name</label>
+                      <input type="text" class="form-control" id="function-name" placeholder="myFunction">
+                    </div>
+                    <div class="col-md-6">
+                      <label for="function-type" class="form-label">Type</label>
+                      <select class="form-select" id="function-type">
+                        <option value="local">Local</option>
+                        <option value="cloud">Cloud (API)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="function-description" class="form-label">Description</label>
+                    <input type="text" class="form-control" id="function-description"
+                      placeholder="Describe what this function does">
+                  </div>
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="function-model" class="form-label">Preferred LLM Model (Optional)</label>
+                      <select class="form-select" id="function-model">
+                        <option value="">None (Use default)</option>
+                        <!-- Models will be populated here -->
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="function-api-key" class="form-label">API Key Name (For cloud functions)</label>
+                      <input type="text" class="form-control" id="function-api-key" placeholder="e.g., weather">
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="function-parameters" class="form-label">Parameters Schema (JSON)</label>
+                    <div id="parameters-editor"></div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="function-handler" class="form-label">Function Handler Code</label>
+                    <div id="handler-editor"></div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="function-custom-prompt" class="form-label">Custom Prompt (For LLM integration)</label>
+                    <textarea class="form-control" id="function-custom-prompt" rows="3"
+                      placeholder="You are a specialized function for..."></textarea>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Models Tab -->
+      <div class="tab-pane fade" id="models" role="tabpanel" aria-labelledby="models-tab">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card mb-3">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">LLM Models</h5>
+                <button class="btn btn-sm btn-primary" id="new-model-btn">
+                  <i class="bi bi-plus"></i> New Model
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="search-box p-2">
+                  <i class="bi bi-search"></i>
+                  <input type="text" class="form-control" id="model-search" placeholder="Search models...">
+                </div>
+                <div class="list-group list-group-flush" id="model-list">
+                  <!-- Model list will be populated here -->
+                  <a href="#"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>Default Model</strong>
+                      <small class="d-block text-muted">OpenAI / gpt-4</small>
+                    </div>
+                    <span class="badge rounded-pill bg-secondary">default</span>
+                  </a>
+                  <a href="#"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center disabled">
+                    <div>
+                      <strong>Master Model</strong>
+                      <small class="d-block text-muted">OpenAI / gpt-4</small>
+                    </div>
+                    <span class="badge rounded-pill bg-warning text-dark">system</span>
+                  </a>
+                  <a href="#"
+                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>textAnalysisModel</strong>
+                      <small class="d-block text-muted">OpenAI / gpt-4</small>
+                    </div>
+                    <span class="badge rounded-pill badge-model">specialized</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Model Templates</h5>
+              </div>
+              <div class="card-body">
+                <div class="model-templates-container">
+                  <div class="card model-template-card" data-template="text-analysis">
+                    <div class="card-body">
+                      <h6 class="card-title">Text Analysis</h6>
+                      <p class="card-text small">Specialized for analyzing text sentiment, themes, and keywords.</p>
+                    </div>
+                  </div>
+                  <div class="card model-template-card" data-template="code-generation">
+                    <div class="card-body">
+                      <h6 class="card-title">Code Generation</h6>
+                      <p class="card-text small">Optimized for writing clean, efficient code.</p>
+                    </div>
+                  </div>
+                  <div class="card model-template-card" data-template="creative-writing">
+                    <div class="card-body">
+                      <h6 class="card-title">Creative Writing</h6>
+                      <p class="card-text small">Enhanced creativity for stories and content.</p>
+                    </div>
+                  </div>
+                  <div class="card model-template-card" data-template="summarization">
+                    <div class="card-body">
+                      <h6 class="card-title">Summarization</h6>
+                      <p class="card-text small">Creates concise summaries of longer content.</p>
+                    </div>
+                  </div>
+                  <div class="card model-template-card" data-template="qa">
+                    <div class="card-body">
+                      <h6 class="card-title">Question Answering</h6>
+                      <p class="card-text small">Focused on accurate, relevant answers.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Model Configuration</h5>
+                <div>
+                  <button class="btn btn-sm btn-outline-secondary" id="test-model-btn">
+                    <i class="bi bi-play"></i> Test
+                  </button>
+                  <button class="btn btn-sm btn-success" id="save-model-btn">
+                    <i class="bi bi-save"></i> Save
+                  </button>
+                  <button class="btn btn-sm btn-danger" id="delete-model-btn">
+                    <i class="bi bi-trash"></i> Delete
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <form id="model-form">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="model-id" class="form-label">Model ID</label>
+                      <input type="text" class="form-control" id="model-id" placeholder="mySpecializedModel">
+                    </div>
+                    <div class="col-md-6">
+                      <label for="model-provider" class="form-label">Provider</label>
+                      <select class="form-select" id="model-provider">
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="google">Google</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="model-name" class="form-label">Model Name</label>
+                      <select class="form-select" id="model-name">
+                        <!-- Will be populated based on provider -->
+                        <option value="gpt-4">gpt-4</option>
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="model-api-key" class="form-label">API Key Name</label>
+                      <input type="text" class="form-control" id="model-api-key" placeholder="e.g., openai">
+                    </div>
+                  </div>
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <label for="model-temperature" class="form-label">Temperature</label>
+                      <div class="d-flex align-items-center">
+                        <input type="range" class="form-range me-2" id="model-temperature" min="0" max="1" step="0.1"
+                          value="0.7">
+                        <span id="temperature-value">0.7</span>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <label for="model-max-tokens" class="form-label">Max Tokens</label>
+                      <input type="number" class="form-control" id="model-max-tokens" value="2048">
+                    </div>
+                    <div class="col-md-4">
+                      <label for="model-top-p" class="form-label">Top P</label>
+                      <input type="number" class="form-control" id="model-top-p" min="0" max="1" step="0.1" value="1">
+                    </div>
+                  </div>
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="model-frequency-penalty" class="form-label">Frequency Penalty</label>
+                      <input type="number" class="form-control" id="model-frequency-penalty" min="-2" max="2" step="0.1"
+                        value="0">
+                    </div>
+                    <div class="col-md-6">
+                      <label for="model-presence-penalty" class="form-label">Presence Penalty</label>
+                      <input type="number" class="form-control" id="model-presence-penalty" min="-2" max="2" step="0.1"
+                        value="0">
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="model-system-prompt" class="form-label">System Prompt</label>
+                    <textarea class="form-control" id="model-system-prompt" rows="4"
+                      placeholder="You are a helpful AI assistant..."></textarea>
+                  </div>
+                  <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="model-json-response">
+                    <label class="form-check-label" for="model-json-response">
+                      JSON Response Format
+                    </label>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Settings Tab -->
+      <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-header">
+                <h5 class="mb-0">Agent Configuration</h5>
+              </div>
+              <div class="card-body">
+                <form id="agent-settings-form">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <label for="agent-name" class="form-label">Agent Name</label>
+                      <input type="text" class="form-control" id="agent-name" value="ai-agent">
+                    </div>
+                    <div class="col-md-6">
+                      <label for="agent-version" class="form-label">Version</label>
+                      <input type="text" class="form-control" id="agent-version" value="1.0.0">
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label for="master-model-prompt" class="form-label">Master Model System Prompt</label>
+                    <textarea class="form-control" id="master-model-prompt" rows="6"></textarea>
+                  </div>
+                  <button type="button" class="btn btn-primary" id="save-agent-settings">Save Settings</button>
+                </form>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Function-Model Associations</h5>
+              </div>
+              <div class="card-body">
+                <p class="card-text">Functions using specialized LLM models:</p>
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Function</th>
+                      <th>Model</th>
+                    </tr>
+                  </thead>
+                  <tbody id="function-model-table">
+                    <!-- Will be populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-header">
+                <h5 class="mb-0">System Status</h5>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <h6>Components</h6>
+                  <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Function Manager
+                      <span class="badge bg-success rounded-pill">Active</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Messaging Manager
+                      <span class="badge bg-success rounded-pill">Active</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Job Queue Manager
+                      <span class="badge bg-success rounded-pill">Active</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      LLM Manager
+                      <span class="badge bg-success rounded-pill">Active</span>
+                    </li>
+                  </ul>
+                </div>
+                <div class="mb-3">
+                  <h6>Statistics</h6>
+                  <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Registered Functions
+                      <span class="badge bg-primary rounded-pill" id="function-count">3</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Registered Models
+                      <span class="badge bg-primary rounded-pill" id="model-count">3</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      Active Jobs
+                      <span class="badge bg-primary rounded-pill" id="active-jobs">0</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Actions</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-grid gap-2">
+                  <button class="btn btn-outline-primary" id="export-config-btn">
+                    <i class="bi bi-download"></i> Export Configuration
+                  </button>
+                  <button class="btn btn-outline-primary" id="import-config-btn">
+                    <i class="bi bi-upload"></i> Import Configuration
+                  </button>
+                  <button class="btn btn-outline-danger" id="restart-agent-btn">
+                    <i class="bi bi-arrow-repeat"></i> Restart Agent
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-indicator" class="status-indicator"></div>
+  <!-- Modals -->
+  <!-- Modal for function testing -->
+  <div class="modal fade" id="test-function-modal" tabindex="-1" aria-labelledby="test-function-modal-label"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="test-function-modal-label">Test Function</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="test-function-form">
+            <div class="mb-3">
+              <label for="test-function-params" class="form-label">Parameters (JSON)</label>
+              <div id="test-parameters-editor"></div>
+            </div>
+            <div class="mb-3">
+              <label for="test-function-context" class="form-label">Context (optional)</label>
+              <div id="test-context-editor"></div>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="test-with-model">
+              <label class="form-check-label" for="test-with-model">
+                Use preferred LLM model (if specified)
+              </label>
+            </div>
+          </form>
+          <div class="mt-3">
+            <h6>Result:</h6>
+            <pre id="test-function-result" class="border p-3">No result yet. Click "Execute" to run the function.</pre>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="execute-test-function-btn">Execute</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for model testing -->
+  <div class="modal fade" id="test-model-modal" tabindex="-1" aria-labelledby="test-model-modal-label"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="test-model-modal-label">Test Model</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="test-model-form">
+            <div class="mb-3">
+              <label for="test-model-prompt" class="form-label">Prompt</label>
+              <textarea class="form-control" id="test-model-prompt" rows="4"
+                placeholder="Enter your prompt here..."></textarea>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="test-include-system-prompt" checked>
+              <label class="form-check-label" for="test-include-system-prompt">
+                Include system prompt
+              </label>
+            </div>
+          </form>
+          <div class="mt-3">
+            <h6>Response:</h6>
+            <pre id="test-model-result" class="border p-3">No response yet. Click "Generate" to test the model.</pre>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="execute-test-model-btn">Generate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for model template creation -->
+  <div class="modal fade" id="model-template-modal" tabindex="-1" aria-labelledby="model-template-modal-label"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="model-template-modal-label">Create from Template</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="model-template-form">
+            <div class="mb-3">
+              <label for="template-model-id" class="form-label">Model ID</label>
+              <input type="text" class="form-control" id="template-model-id" placeholder="e.g., codeAssistantModel">
+            </div>
+            <div class="mb-3">
+              <label for="template-type" class="form-label">Template Type</label>
+              <select class="form-select" id="template-type">
+                <option value="text-analysis">Text Analysis</option>
+                <option value="code-generation">Code Generation</option>
+                <option value="creative-writing">Creative Writing</option>
+                <option value="summarization">Summarization</option>
+                <option value="qa">Question Answering</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="template-provider" class="form-label">Provider</label>
+              <select class="form-select" id="template-provider">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="google">Google</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="template-model-name" class="form-label">Model Name</label>
+              <select class="form-select" id="template-model-name">
+                <!-- Will be populated based on provider -->
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="create-from-template-btn">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for importing function -->
+  <div class="modal fade" id="import-function-modal" tabindex="-1" aria-labelledby="import-function-modal-label"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="import-function-modal-label">Import Function</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="import-function-json" class="form-label">Function Definition (JSON)</label>
+            <textarea class="form-control" id="import-function-json" rows="10"
+              placeholder='{"name": "myFunction", "description": "...", ...}'></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="import-function-btn-confirm">Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal fade" id="help-modal" tabindex="-1" aria-labelledby="help-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="help-modal-label">AI Agent Customization Help</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="accordion" id="helpAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne"
+                  aria-expanded="true" aria-controls="collapseOne">
+                  Managing Functions
+                </button>
+              </h2>
+              <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
+                data-bs-parent="#helpAccordion">
+                <div class="accordion-body">
+                  <p>Functions are the building blocks of your AI agent. Each function performs a specific task and can
+                    be called directly or through the message system.</p>
+
+                  <h6>Creating Functions:</h6>
+                  <ol>
+                    <li>Click the "New" button in the Functions tab</li>
+                    <li>Fill in the function details (name, description, type)</li>
+                    <li>Define the parameters schema (JSON format)</li>
+                    <li>Write the function handler code</li>
+                    <li>Optionally, assign a specialized LLM model</li>
+                    <li>Click "Save" to register the function</li>
+                  </ol>
+
+                  <h6>Function Types:</h6>
+                  <ul>
+                    <li><strong>Local</strong>: Functions that run entirely within the agent</li>
+                    <li><strong>Cloud</strong>: Functions that call external APIs (require API keys)</li>
+                  </ul>
+
+                  <h6>Testing Functions:</h6>
+                  <p>Use the "Test" button to execute a function with sample parameters and see the results immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                  Managing LLM Models
+                </button>
+              </h2>
+              <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
+                data-bs-parent="#helpAccordion">
+                <div class="accordion-body">
+                  <p>The AI Agent can use multiple LLM models for different purposes. Each model can be configured with
+                    specific settings.</p>
+
+                  <h6>Model Types:</h6>
+                  <ul>
+                    <li><strong>Default Model</strong>: Used when no specific model is requested</li>
+                    <li><strong>Master Model</strong>: Used for analyzing and routing messages (configured in Settings)
+                    </li>
+                    <li><strong>Specialized Models</strong>: Optimized for specific tasks (text analysis, code
+                      generation, etc.)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Initialize Socket.io
+    const socket = io();
+
+    // DOM Elements - Function Tab
+    const functionList = document.getElementById('function-list');
+    const functionForm = document.getElementById('function-form');
+    const functionName = document.getElementById('function-name');
+    const functionType = document.getElementById('function-type');
+    const functionDescription = document.getElementById('function-description');
+    const functionModel = document.getElementById('function-model');
+    const functionApiKey = document.getElementById('function-api-key');
+    const functionCustomPrompt = document.getElementById('function-custom-prompt');
+    const functionSearch = document.getElementById('function-search');
+    const newFunctionBtn = document.getElementById('new-function-btn');
+    const saveFunctionBtn = document.getElementById('save-function-btn');
+    const deleteFunctionBtn = document.getElementById('delete-function-btn');
+    const testFunctionBtn = document.getElementById('test-function-btn');
+    const exportFunctionBtn = document.getElementById('export-function-btn');
+    const importFunctionBtn = document.getElementById('import-function-btn');
+    const executeTestFunctionBtn = document.getElementById('execute-test-function-btn');
+
+    // DOM Elements - Model Tab
+    const modelList = document.getElementById('model-list');
+    const modelForm = document.getElementById('model-form');
+    const modelId = document.getElementById('model-id');
+    const modelProvider = document.getElementById('model-provider');
+    const modelName = document.getElementById('model-name');
+    const modelApiKey = document.getElementById('model-api-key');
+    const modelTemperature = document.getElementById('model-temperature');
+    const temperatureValue = document.getElementById('temperature-value');
+    const modelMaxTokens = document.getElementById('model-max-tokens');
+    const modelTopP = document.getElementById('model-top-p');
+    const modelFrequencyPenalty = document.getElementById('model-frequency-penalty');
+    const modelPresencePenalty = document.getElementById('model-presence-penalty');
+    const modelSystemPrompt = document.getElementById('model-system-prompt');
+    const modelJsonResponse = document.getElementById('model-json-response');
+    const modelSearch = document.getElementById('model-search');
+    const newModelBtn = document.getElementById('new-model-btn');
+    const saveModelBtn = document.getElementById('save-model-btn');
+    const deleteModelBtn = document.getElementById('delete-model-btn');
+    const testModelBtn = document.getElementById('test-model-btn');
+    const executeTestModelBtn = document.getElementById('execute-test-model-btn');
+
+    // DOM Elements - Settings Tab
+    const agentName = document.getElementById('agent-name');
+    const agentVersion = document.getElementById('agent-version');
+    const masterModelPrompt = document.getElementById('master-model-prompt');
+    const saveAgentSettingsBtn = document.getElementById('save-agent-settings');
+    const functionCount = document.getElementById('function-count');
+    const modelCount = document.getElementById('model-count');
+    const activeJobs = document.getElementById('active-jobs');
+    const functionModelTable = document.getElementById('function-model-table');
+    const exportConfigBtn = document.getElementById('export-config-btn');
+    const importConfigBtn = document.getElementById('import-config-btn');
+    const restartAgentBtn = document.getElementById('restart-agent-btn');
+
+    // Status Indicator
+    const statusIndicator = document.getElementById('status-indicator');
+
+    // CodeMirror editors
+    let parametersEditor, handlerEditor, testParametersEditor, testContextEditor;
+
+
+
+
+    // Initialize CodeMirror editors
+    function initializeEditors() {
+      // Parameters editor
+      parametersEditor = CodeMirror(document.getElementById('parameters-editor'), {
+        value: JSON.stringify({
+          type: 'object',
+          properties: {},
+          required: []
+        }, null, 2),
+        mode: 'javascript',
+        theme: 'default',
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        extraKeys: { 'Ctrl-Space': 'autocomplete' }
+      });
+
+      // Handler editor
+      handlerEditor = CodeMirror(document.getElementById('handler-editor'), {
+        value: 'async (params, context) => {\n  // Your function implementation here\n  return { result: "Success" };\n}',
+        mode: 'javascript',
+        theme: 'default',
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        extraKeys: { 'Ctrl-Space': 'autocomplete' }
+      });
+
+      // Test parameters editor
+      testParametersEditor = CodeMirror(document.getElementById('test-parameters-editor'), {
+        value: '{\n  \n}',
+        mode: 'javascript',
+        theme: 'default',
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true
+      });
+
+      // Test context editor
+      testContextEditor = CodeMirror(document.getElementById('test-context-editor'), {
+        value: '{\n  \n}',
+        mode: 'javascript',
+        theme: 'default',
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true
+      });
+    }
+
+    // Create model from template
+    document.getElementById('create-from-template-btn').addEventListener('click', function () {
+      const modelId = document.getElementById('template-model-id').value;
+
+      // Check if the template-type element exists
+      const templateTypeElement = document.getElementById('template-type');
+      let templateType;
+
+      if (templateTypeElement) {
+        // Get template type from the dropdown if it exists
+        templateType = templateTypeElement.value;
+      } else {
+        // Try to get the template type from the active card
+        document.querySelectorAll('.model-template-card').forEach(card => {
+          card.addEventListener('click', function () {
+            const templateName = this.getAttribute('data-template');
+
+            // Mark this card as active
+            document.querySelectorAll('.model-template-card').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+
+            // Show the model template modal with the selected template
+            if (templateName && modelTemplates[templateName]) {
+              // Show modal
+              const modal = new bootstrap.Modal(document.getElementById('model-template-modal'));
+
+              // Set the template type if the dropdown exists
+              const templateTypeSelect = document.getElementById('template-type');
+              if (templateTypeSelect) {
+                templateTypeSelect.value = templateName;
+              }
+
+              // Update model names based on the default provider
+              updateTemplateModelNames();
+
+              // Set a default model ID based on the template name
+              document.getElementById('template-model-id').value = templateName + 'Model';
+
+              // Show the modal
+              modal.show();
+            }
+          });
+        });
+        templateType = activeCard ? activeCard.dataset.template : null;
+      }
+
+      const provider = document.getElementById('template-provider').value;
+      const modelNameEl = document.getElementById('template-model-name');
+      const modelName = modelNameEl.options[modelNameEl.selectedIndex].value;
+
+      if (!modelId) {
+        showStatus('Model ID is required', 'error');
+        return;
+      }
+
+      if (!templateType || !modelTemplates[templateType]) {
+        showStatus('Please select a valid template type', 'error');
+        return;
+      }
+
+      // Get template settings
+      const template = modelTemplates[templateType];
+
+      // Fill the model form with template values
+      document.getElementById('model-id').value = modelId;
+      document.getElementById('model-provider').value = provider;
+      document.getElementById('model-name').value = modelName;
+      document.getElementById('model-api-key').value = provider.toLowerCase();
+      document.getElementById('model-temperature').value = template.temperature;
+      document.getElementById('temperature-value').textContent = template.temperature;
+      document.getElementById('model-max-tokens').value = template.maxTokens;
+      document.getElementById('model-system-prompt').value = template.systemPrompt;
+
+      // Close the modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('model-template-modal'));
+      modal.hide();
+
+      showStatus('Template applied', 'success');
+    });
+
+    // Model Templates
+    const modelTemplates = {
+      'text-analysis': {
+        temperature: 0.3,
+        maxTokens: 1024,
+        systemPrompt: 'You are a specialized text analysis AI. Your task is to analyze the provided text and extract sentiment, key topics, themes, and important keywords. Provide a concise but comprehensive analysis.'
+      },
+      'code-generation': {
+        temperature: 0.2,
+        maxTokens: 2048,
+        systemPrompt: 'You are a code generation expert. Write clean, efficient, and well-commented code. Follow best practices for the programming language being used. Consider edge cases and provide appropriate error handling.'
+      },
+      'creative-writing': {
+        temperature: 0.8,
+        maxTokens: 2048,
+        systemPrompt: 'You are a creative writing assistant with a flair for engaging storytelling and vivid descriptions. Create imaginative content that captivates the reader while maintaining coherence and narrative flow.'
+      },
+      'summarization': {
+        temperature: 0.3,
+        maxTokens: 1024,
+        systemPrompt: 'You are a summarization specialist. Create concise, accurate summaries that capture the key points from the original content while maintaining context and meaning. Prioritize clarity and brevity.'
+      },
+      'qa': {
+        temperature: 0.4,
+        maxTokens: 1024,
+        systemPrompt: 'You are a question answering expert. Provide accurate, relevant, and comprehensive answers to questions. Stay focused on the specific question asked and provide evidence-based responses when possible.'
+      }
+    };
+
+    // Function Templates
+    const functionTemplates = {
+      'weather': {
+        name: 'getWeather',
+        type: 'cloud',
+        description: 'Get current weather for a specified city',
+        apiKeyName: 'weather',
+        parameters: {
+          type: 'object',
+          properties: {
+            city: {
+              type: 'string',
+              description: 'The city name to get weather for'
+            },
+            units: {
+              type: 'string',
+              enum: ['metric', 'imperial'],
+              description: 'Units to use for temperature (metric: Celsius, imperial: Fahrenheit)',
+              default: 'metric'
+            }
+          },
+          required: ['city']
+        },
+        handler: `async (params, context) => {
+  const city = params.city;
+  const units = params.units || 'metric';
+  
+  try {
+    const apiKey = context?.apiKey;
+    
+    if (!apiKey) {
+      throw new Error('Weather API key not provided');
+    }
+    
+    // Use axios to make the API call
+    const url = \`https://api.openweathermap.org/data/2.5/weather?q=\${encodeURIComponent(city)}&units=\${units}&appid=\${apiKey}\`;
+    
+    // Use axios to make the API call
+    const axios = require('axios');
+    const response = await axios.get(url);
+    
+    return {
+      city: response.data.name,
+      country: response.data.sys.country,
+      temperature: response.data.main.temp,
+      feels_like: response.data.main.feels_like,
+      humidity: response.data.main.humidity,
+      wind_speed: response.data.wind.speed,
+      description: response.data.weather[0].description,
+      icon: response.data.weather[0].icon
+    };
+  } catch (error) {
+    if (error.response) {
+      if (error.response.status === 404) {
+        throw new Error(\`City "\${city}" not found\`);
+      } else {
+        throw new Error(\`Weather API error: \${error.response.status} - \${error.response.data.message || 'Unknown error'}\`);
+      }
+    }
+    throw error;
+  }
+}`
+      },
+      'text-analysis': {
+        name: 'analyzeText',
+        type: 'local',
+        description: 'Analyze text for sentiment, keywords, and themes',
+        preferredModelId: 'textAnalysisModel',
+        customPrompt: 'You are a specialized text analysis AI. Your task is to analyze the provided text and extract sentiment, key topics, themes, and important keywords. Provide a concise but comprehensive analysis.',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: {
+              type: 'string',
+              description: 'The text to analyze'
+            },
+            options: {
+              type: 'object',
+              description: 'Analysis options',
+              properties: {
+                includeSentiment: {
+                  type: 'boolean',
+                  description: 'Whether to include sentiment analysis'
+                },
+                includeKeywords: {
+                  type: 'boolean',
+                  description: 'Whether to include keyword extraction'
+                },
+                includeThemes: {
+                  type: 'boolean',
+                  description: 'Whether to include theme identification'
+                }
+              }
+            }
+          },
+          required: ['text']
+        },
+        handler: `async (params, context) => {
+  const text = params.text;
+  const options = params.options || {
+    includeSentiment: true,
+    includeKeywords: true,
+    includeThemes: true
+  };
+  
+  try {
+    // Check if we have access to the LLM manager in the context
+    if (!context?.llm?.manager) {
+      throw new Error('LLM manager not available in function context');
+    }
+    
+    const llmManager = context.llm.manager;
+    const modelId = context.llm.modelId || 'textAnalysisModel';
+    
+    // Create a system prompt based on the options
+    let systemPrompt = 'You are a text analysis expert. Analyze the following text';
+    const analysisTypes = [];
+    
+    if (options.includeSentiment) {
+      analysisTypes.push('sentiment (positive, negative, or neutral)');
+    }
+    
+    if (options.includeKeywords) {
+      analysisTypes.push('important keywords');
+    }
+    
+    if (options.includeThemes) {
+      analysisTypes.push('main themes and topics');
+    }
+    
+    if (analysisTypes.length > 0) {
+      systemPrompt += \` and provide the following: \${analysisTypes.join(', ')}.\`;
+    }
+    
+    systemPrompt += ' Format your response as a JSON object with appropriate keys for each analysis type.';
+    
+    // Set up messages for the LLM
+    const messages = [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: text
+      }
+    ];
+    
+    // Use the LLM manager to send the message
+    const response = await llmManager.sendMessage(
+      messages,
+      { responseFormat: 'json_object' },
+      modelId
+    );
+    
+    // Try to parse the response as JSON
+    try {
+      const analysis = JSON.parse(response.content);
+      return {
+        text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        analysis,
+        model: response.model
+      };
+    } catch (error) {
+      // If response isn't valid JSON, return it as plain text
+      return {
+        text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        analysis: response.content,
+        model: response.model
+      };
+    }
+  } catch (error) {
+    console.error('Error analyzing text:', error);
+    throw error;
+  }
+}`
+      },
+      'webhook': {
+        name: 'processWebhook',
+        type: 'local',
+        description: 'Process incoming webhooks and take appropriate actions',
+        parameters: {
+          type: 'object',
+          properties: {
+            source: {
+              type: 'string',
+              description: 'The source of the webhook'
+            },
+            event: {
+              type: 'string',
+              description: 'The event type of the webhook'
+            },
+            payload: {
+              type: 'object',
+              description: 'The webhook payload data'
+            },
+            headers: {
+              type: 'object',
+              description: 'The webhook request headers'
+            }
+          },
+          required: ['source', 'event', 'payload']
+        },
+        handler: `async (params, context) => {
+  const source = params.source;
+  const event = params.event;
+  const payload = params.payload;
+  const headers = params.headers || {};
+  
+  try {
+    // Check if we have access to the LLM manager in the context
+    if (!context?.llm?.manager) {
+      throw new Error('LLM manager not available in function context');
+    }
+    
+    const llmManager = context.llm.manager;
+    
+    // Create a mock message for the Master Model to analyze
+    const mockMessage = {
+      id: context.messageId || \`webhook-\${Date.now()}\`,
+      type: \`webhook:\${source}:\${event}\`,
+      timestamp: Date.now(),
+      payload: {
+        source,
+        event,
+        data: payload,
+        headers
+      }
+    };
+    
+    console.log(\`Processing webhook from \${source} with event \${event}\`);
+    
+    // Use the Master Model to analyze the webhook and decide what to do
+    const result = await llmManager.processMasterModelMessage(mockMessage);
+    
+    // Log the Master Model's decision
+    console.log(\`Master Model decided to: \${result.action || 'unknown action'}\`);
+    
+    return {
+      processed: true,
+      source,
+      event,
+      masterModelDecision: result,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error(\`Error processing webhook from \${source}:\`, error);
+    throw error;
+  }
+}`
+      },
+      'data-processor': {
+        name: 'processData',
+        type: 'local',
+        description: 'Process and transform data from various sources',
+        parameters: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              description: 'The data to process'
+            },
+            format: {
+              type: 'string',
+              enum: ['json', 'csv', 'xml'],
+              description: 'The format of the data'
+            },
+            transformations: {
+              type: 'array',
+              description: 'List of transformations to apply',
+              items: {
+                type: 'object',
+                properties: {
+                  type: {
+                    type: 'string',
+                    enum: ['filter', 'map', 'group', 'sort', 'aggregate']
+                  },
+                  config: {
+                    type: 'object',
+                    description: 'Configuration for the transformation'
+                  }
+                }
+              }
+            },
+            outputFormat: {
+              type: 'string',
+              enum: ['json', 'csv', 'summary'],
+              description: 'The format of the output'
+            }
+          },
+          required: ['data']
+        },
+        handler: `async (params, context) => {
+  const data = params.data;
+  const format = params.format || 'json';
+  const transformations = params.transformations || [];
+  const outputFormat = params.outputFormat || 'json';
+  
+  try {
+    // Process the data based on the input format
+    let processedData = [...data];
+    
+    // Apply transformations in sequence
+    for (const transformation of transformations) {
+      switch (transformation.type) {
+        case 'filter':
+          processedData = processedData.filter(item => {
+            // Use Function constructor to create a filter function
+            const filterFn = new Function('item', \`return \${transformation.config.condition}\`);
+            return filterFn(item);
+          });
+          break;
+          
+        case 'map':
+          processedData = processedData.map(item => {
+            // Use Function constructor to create a map function
+            const mapFn = new Function('item', \`return \${transformation.config.expression}\`);
+            return mapFn(item);
+          });
+          break;
+          
+        case 'group':
+          // Group by the specified field
+          const groupField = transformation.config.field;
+          const grouped = {};
+          
+          processedData.forEach(item => {
+            const key = item[groupField];
+            if (!grouped[key]) {
+              grouped[key] = [];
+            }
+            grouped[key].push(item);
+          });
+          
+          // Convert groups to array if needed
+          if (transformation.config.asArray) {
+            processedData = Object.entries(grouped).map(([key, items]) => ({
+              key,
+              items
+            }));
+          } else {
+            processedData = grouped;
+          }
+          break;
+          
+        case 'sort':
+          // Sort by the specified field
+          const sortField = transformation.config.field;
+          const sortDirection = transformation.config.direction === 'desc' ? -1 : 1;
+          
+          processedData.sort((a, b) => {
+            if (a[sortField] < b[sortField]) return -1 * sortDirection;
+            if (a[sortField] > b[sortField]) return 1 * sortDirection;
+            return 0;
+          });
+          break;
+          
+        case 'aggregate':
+          // Aggregate by the specified function
+          const aggFunction = transformation.config.function;
+          const aggField = transformation.config.field;
+          
+          if (aggFunction === 'sum') {
+            processedData = processedData.reduce((sum, item) => sum + (item[aggField] || 0), 0);
+          } else if (aggFunction === 'avg') {
+            processedData = processedData.reduce((sum, item) => sum + (item[aggField] || 0), 0) / processedData.length;
+          } else if (aggFunction === 'count') {
+            processedData = processedData.length;
+          } else if (aggFunction === 'min') {
+            processedData = Math.min(...processedData.map(item => item[aggField] || 0));
+          } else if (aggFunction === 'max') {
+            processedData = Math.max(...processedData.map(item => item[aggField] || 0));
+          }
+          break;
+      }
+    }
+    
+    // Format the output
+    let output;
+    
+    if (outputFormat === 'csv' && Array.isArray(processedData)) {
+      // Convert to CSV
+      const headers = Object.keys(processedData[0] || {}).join(',');
+      const rows = processedData.map(item => 
+        Object.values(item).map(val => 
+          typeof val === 'string' ? \`"\${val.replace(/"/g, '""')}"\` : val
+        ).join(',')
+      );
+      output = [headers, ...rows].join('\\n');
+    } else if (outputFormat === 'summary' && Array.isArray(processedData)) {
+      // Generate a summary
+      const count = processedData.length;
+      const fields = Object.keys(processedData[0] || {});
+      
+      output = {
+        count,
+        fields,
+        sample: processedData.slice(0, 3)
+      };
+    } else {
+      // Default to JSON
+      output = processedData;
+    }
+    
+    return {
+      originalCount: data.length,
+      processedCount: Array.isArray(processedData) ? processedData.length : 1,
+      format: outputFormat,
+      data: output
+    };
+  } catch (error) {
+    console.error('Error processing data:', error);
+    throw error;
+  }
+}`
+      }
+    };
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeEditors();
+
+      // Load initial data
+      loadFunctions();
+
+      // Set up event listeners
+      setupEventListeners();
+    });
+
+    // Function to show status messages
+    function showStatus(message, type) {
+      statusIndicator.textContent = message;
+      statusIndicator.className = 'status-indicator';
+
+      if (type === 'success') {
+        statusIndicator.classList.add('status-success');
+      } else if (type === 'error') {
+        statusIndicator.classList.add('status-error');
+      } else {
+        statusIndicator.classList.add('status-info');
+      }
+
+      statusIndicator.style.display = 'block';
+
+      // Hide after 3 seconds
+      setTimeout(() => {
+        statusIndicator.style.display = 'none';
+      }, 3000);
+    }
+
+    // Load all functions from server
+    function loadFunctions() {
+      socket.emit('function:list');
+      socket.emit('model:list');
+      socket.emit('agent:settings:get');
+      socket.emit('agent:stats');
+    }
+    // Show test function modal
+    function showTestFunctionModal() {
+      const name = functionName.value;
+
+      if (!name) {
+        showStatus('No function selected', 'error');
+        return;
+      }
+
+      try {
+        // Parse parameters to generate sample test parameters
+        const parameters = JSON.parse(parametersEditor.getValue());
+        let sampleParams = {};
+
+        // Generate sample parameters based on schema
+        if (parameters && parameters.properties) {
+          Object.keys(parameters.properties).forEach(key => {
+            const prop = parameters.properties[key];
+
+            if (prop.type === 'string') {
+              if (prop.enum && prop.enum.length > 0) {
+                sampleParams[key] = prop.enum[0];
+              } else {
+                sampleParams[key] = `Sample ${key}`;
+              }
+            } else if (prop.type === 'number' || prop.type === 'integer') {
+              sampleParams[key] = 42;
+            } else if (prop.type === 'boolean') {
+              sampleParams[key] = true;
+            } else if (prop.type === 'object' && prop.properties) {
+              sampleParams[key] = {};
+              Object.keys(prop.properties).forEach(subKey => {
+                const subProp = prop.properties[subKey];
+                if (subProp.type === 'string') {
+                  sampleParams[key][subKey] = `Sample ${subKey}`;
+                } else if (subProp.type === 'number' || subProp.type === 'integer') {
+                  sampleParams[key][subKey] = 42;
+                } else if (subProp.type === 'boolean') {
+                  sampleParams[key][subKey] = true;
+                } else {
+                  sampleParams[key][subKey] = null;
+                }
+              });
+            } else if (prop.type === 'array') {
+              sampleParams[key] = [];
+            }
+          });
+        }
+
+        // Set up the test parameters
+        testParametersEditor.setValue(JSON.stringify(sampleParams, null, 2));
+
+        // Check if the function has a preferred model
+        const useModel = !!functionModel.value;
+        document.getElementById('test-with-model').checked = useModel;
+
+        // Set up the test context
+        let sampleContext = {};
+        if (functionType.value === 'cloud' && functionApiKey.value) {
+          sampleContext.apiKey = 'YOUR_API_KEY';
+        }
+        testContextEditor.setValue(JSON.stringify(sampleContext, null, 2));
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('test-function-modal'));
+        modal.show();
+      } catch (e) {
+        console.error('Error parsing parameters for test:', e);
+        showStatus(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    // Execute test function
+    function executeTestFunction() {
+      const name = functionName.value;
+
+      if (!name) {
+        showStatus('No function selected', 'error');
+        return;
+      }
+
+      try {
+        // Parse parameters and context
+        const params = JSON.parse(testParametersEditor.getValue());
+        const context = JSON.parse(testContextEditor.getValue());
+        const useModel = document.getElementById('test-with-model').checked;
+
+        // Clear previous result
+        document.getElementById('test-function-result').textContent = 'Executing...';
+
+        // Send test request
+        socket.emit('function:test', {
+          name,
+          params,
+          context,
+          useModel
+        });
+      } catch (e) {
+        console.error('Error parsing parameters for test:', e);
+        showStatus(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    // Show function test result
+    function showFunctionTestResult(data) {
+      const resultElement = document.getElementById('test-function-result');
+
+      if (data.error) {
+        resultElement.textContent = `Error: ${data.error}`;
+        resultElement.classList.add('text-danger');
+      } else {
+        resultElement.textContent = JSON.stringify(data.result, null, 2);
+        resultElement.classList.remove('text-danger');
+      }
+    }
+
+    // Load function template
+    function loadFunctionTemplate(templateName) {
+      const template = functionTemplates[templateName];
+
+      if (!template) {
+        showStatus('Template not found', 'error');
+        return;
+      }
+
+      functionName.value = template.name;
+      functionType.value = template.type;
+      functionDescription.value = template.description;
+      functionModel.value = template.preferredModelId || '';
+      functionApiKey.value = template.apiKeyName || '';
+      functionCustomPrompt.value = template.customPrompt || '';
+
+      parametersEditor.setValue(JSON.stringify(template.parameters, null, 2));
+      handlerEditor.setValue(template.handler);
+
+      // Enable editing name field
+      functionName.disabled = false;
+
+      showStatus('Template loaded', 'success');
+    }
+
+    // Show model template modal
+    function showModelTemplateModal(templateName) {
+  // Clear the form
+  document.getElementById('template-model-id').value = '';
+  
+  // Set template type if provided and element exists
+  const templateTypeSelect = document.getElementById('template-type');
+  if (templateName && modelTemplates[templateName] && templateTypeSelect) {
+    templateTypeSelect.value = templateName;
+    
+    // Set a default model ID based on the template name
+    document.getElementById('template-model-id').value = templateName + 'Model';
+  }
+  
+  // Update model name dropdown based on provider
+  updateTemplateModelNames();
+  
+  // Show the modal
+  const modal = new bootstrap.Modal(document.getElementById('model-template-modal'));
+  modal.show();
+}
+    // Update template model names based on provider
+    function updateTemplateModelNames() {
+  const provider = document.getElementById('template-provider').value;
+  const modelNameSelect = document.getElementById('template-model-name');
+  
+  // Clear existing options
+  modelNameSelect.innerHTML = '';
+  
+  // Add options based on provider
+  if (provider === 'openai') {
+    const options = ['gpt-4', 'gpt-3.5-turbo'];
+    options.forEach(option => {
+      const el = document.createElement('option');
+      el.value = option;
+      el.textContent = option;
+      modelNameSelect.appendChild(el);
+    });
+  } else if (provider === 'anthropic') {
+    const options = ['claude-3-opus-20240229', 'claude-3-sonnet-20240229'];
+    options.forEach(option => {
+      const el = document.createElement('option');
+      el.value = option;
+      el.textContent = option;
+      modelNameSelect.appendChild(el);
+    });
+  } else if (provider === 'google') {
+    const options = ['gemini-pro', 'gemini-ultra'];
+    options.forEach(option => {
+      const el = document.createElement('option');
+      el.value = option;
+      el.textContent = option;
+      modelNameSelect.appendChild(el);
+    });
+  }
+}
+    // Save model
+    function saveModel() {
+      try {
+        if (!modelId.value) {
+          throw new Error('Model ID is required');
+        }
+
+        // Build model data
+        const modelData = {
+          modelId: modelId.value,
+          config: {
+            provider: modelProvider.value,
+            model: modelName.value,
+            apiKeyName: modelApiKey.value,
+            temperature: parseFloat(modelTemperature.value),
+            maxTokens: parseInt(modelMaxTokens.value),
+            topP: parseFloat(modelTopP.value),
+            frequencyPenalty: parseFloat(modelFrequencyPenalty.value),
+            presencePenalty: parseFloat(modelPresencePenalty.value),
+            systemPrompt: modelSystemPrompt.value,
+            responseFormat: modelJsonResponse.checked ? 'json_object' : 'text'
+          }
+        };
+
+        // Send to server
+        socket.emit('model:save', modelData);
+
+        showStatus('Saving model...', 'info');
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    }
+
+    // Delete model
+    function deleteModel() {
+      const id = modelId.value;
+
+      if (!id) {
+        showStatus('No model selected', 'error');
+        return;
+      }
+
+      if (id === 'default' || id === 'masterModel') {
+        showStatus(`Cannot delete ${id} model`, 'error');
+        return;
+      }
+
+      if (confirm(`Are you sure you want to delete the model "${id}"?`)) {
+        socket.emit('model:delete', { id });
+        showStatus('Deleting model...', 'info');
+      }
+    }
+
+    // Show test model modal
+    function showTestModelModal() {
+      const id = modelId.value;
+
+      if (!id) {
+        showStatus('No model selected', 'error');
+        return;
+      }
+
+      // Set up the test form
+      document.getElementById('test-model-prompt').value = 'Hello! Please tell me a brief story about artificial intelligence.';
+      document.getElementById('test-include-system-prompt').checked = true;
+      document.getElementById('test-model-result').textContent = 'No response yet. Click "Generate" to test the model.';
+
+      // Show the modal
+      const modal = new bootstrap.Modal(document.getElementById('test-model-modal'));
+      modal.show();
+    }
+
+    // Execute test model
+    function executeTestModel() {
+      const id = modelId.value;
+
+      if (!id) {
+        showStatus('No model selected', 'error');
+        return;
+      }
+
+      try {
+        // Get prompt and settings
+        const prompt = document.getElementById('test-model-prompt').value;
+        const includeSystemPrompt = document.getElementById('test-include-system-prompt').checked;
+
+        // Clear previous result
+        document.getElementById('test-model-result').textContent = 'Generating...';
+
+        // Send test request
+        socket.emit('model:test', {
+          id,
+          prompt,
+          includeSystemPrompt
+        });
+      } catch (e) {
+        showStatus(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    // Show model test result
+    function showModelTestResult(data) {
+      const resultElement = document.getElementById('test-model-result');
+
+      if (data.error) {
+        resultElement.textContent = `Error: ${data.error}`;
+        resultElement.classList.add('text-danger');
+      } else {
+        resultElement.textContent = data.content;
+        resultElement.classList.remove('text-danger');
+      }
+    }
+
+    // Save agent settings
+    function saveAgentSettings() {
+      // Build settings data
+      const settings = {
+        name: agentName.value,
+        version: agentVersion.value,
+        masterModelPrompt: masterModelPrompt.value
+      };
+
+      // Send to server
+      socket.emit('agent:settings:save', settings);
+
+      showStatus('Saving agent settings...', 'info');
+    }
+
+    // Show import function modal
+    function showImportFunctionModal() {
+      document.getElementById('import-function-json').value = '';
+
+      // Show the modal
+      const modal = new bootstrap.Modal(document.getElementById('import-function-modal'));
+      modal.show();
+    }
+
+    // Import function
+    function importFunction() {
+      try {
+        const json = document.getElementById('import-function-json').value;
+        const func = JSON.parse(json);
+
+        // Validate required fields
+        if (!func.name) {
+          throw new Error('Function name is required');
+        }
+
+        if (!func.type) {
+          throw new Error('Function type is required');
+        }
+
+        if (!func.parameters) {
+          throw new Error('Function parameters are required');
+        }
+
+        if (!func.handlerSource) {
+          throw new Error('Function handler source is required');
+        }
+
+        // Send to server
+        socket.emit('function:save', func);
+
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('import-function-modal'));
+        modal.hide();
+
+        showStatus('Importing function...', 'info');
+      } catch (e) {
+        showStatus(`Import error: ${e.message}`, 'error');
+      }
+    }
+
+    // Export function
+    function exportFunction() {
+      const name = functionName.value;
+
+      if (!name) {
+        showStatus('No function selected', 'error');
+        return;
+      }
+
+      try {
+        // Build function data
+        const functionData = {
+          name: functionName.value,
+          type: functionType.value,
+          description: functionDescription.value,
+          preferredModelId: functionModel.value || null,
+          apiKeyName: functionType.value === 'cloud' ? functionApiKey.value : null,
+          parameters: JSON.parse(parametersEditor.getValue()),
+          handlerSource: handlerEditor.getValue(),
+          customPrompt: functionCustomPrompt.value || null
+        };
+
+        // Convert to JSON
+        const json = JSON.stringify(functionData, null, 2);
+
+        // Create a download link
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showStatus('Function exported successfully', 'success');
+      } catch (e) {
+        showStatus(`Export error: ${e.message}`, 'error');
+      }
+    }
+
+    // Save function
+    function saveFunction() {
+      try {
+        if (!functionName.value) {
+          throw new Error('Function name is required');
+        }
+
+        // Parse parameters to ensure they're valid JSON
+        let parameters;
+        try {
+          parameters = JSON.parse(parametersEditor.getValue());
+        } catch (e) {
+          throw new Error(`Invalid parameters JSON: ${e.message}`);
+        }
+
+        // Build function data
+        const functionData = {
+          name: functionName.value,
+          type: functionType.value,
+          description: functionDescription.value,
+          preferredModelId: functionModel.value || null,
+          apiKeyName: functionType.value === 'cloud' ? functionApiKey.value : null,
+          parameters: parameters,
+          handlerSource: handlerEditor.getValue(),
+          customPrompt: functionCustomPrompt.value || null
+        };
+
+        // Send to server
+        socket.emit('function:save', functionData);
+
+        showStatus('Saving function...', 'info');
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    }
+
+    // Delete function
+    function deleteFunction() {
+      const name = functionName.value;
+
+      if (!name) {
+        showStatus('No function selected', 'error');
+        return;
+      }
+
+      if (confirm(`Are you sure you want to delete the function "${name}"?`)) {
+        socket.emit('function:delete', { name });
+        showStatus('Deleting function...', 'info');
+      }
+    }
+    // Get template settings
+    const template = modelTemplates[templateType];
+
+    // Fill the model form with template values
+    document.getElementById('model-id').value = modelId;
+    document.getElementById('model-provider').value = provider;
+    document.getElementById('model-name').value = modelName;
+    document.getElementById('model-api-key').value = provider.toLowerCase();
+    document.getElementById('model-temperature').value = template.temperature;
+    document.getElementById('temperature-value').textContent = template.temperature;
+    document.getElementById('model-max-tokens').value = template.maxTokens;
+    document.getElementById('model-system-prompt').value = template.systemPrompt;
+
+    // Close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('model-template-modal'));
+    modal.hide();
+
+    showStatus('Template applied', 'success');
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Add event listeners to template cards
+      document.querySelectorAll('.model-template-card').forEach(card => {
+        card.addEventListener('click', function () {
+          document.querySelectorAll('.model-template-card').forEach(c => c.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+      document.getElementById('template-provider')?.addEventListener('change', updateTemplateModelNames);
+
+      // Socket events
+      socket.on('function:list:result', (data) => {
+        populateFunctionList(data.functions);
+      });
+
+      socket.on('function:get:result', (data) => {
+        populateFunctionForm(data.function);
+      });
+
+      socket.on('function:save:result', (data) => {
+        if (data.success) {
+          showStatus('Function saved successfully', 'success');
+          socket.emit('function:list');
+        } else {
+          showStatus(`Error: ${data.error}`, 'error');
+        }
+      });
+
+      socket.on('function:delete:result', (data) => {
+        if (data.success) {
+          showStatus('Function deleted successfully', 'success');
+          socket.emit('function:list');
+
+          // Clear the form
+          newFunctionBtn.click();
+        } else {
+          showStatus(`Error: ${data.error}`, 'error');
+        }
+      });
+
+      socket.on('function:test:result', showFunctionTestResult);
+
+      socket.on('model:list:result', (data) => {
+        populateModelList(data.models);
+        updateFunctionModelDropdown(data.models);
+      });
+
+      socket.on('model:get:result', (data) => {
+        populateModelForm(data.model);
+      });
+
+      socket.on('model:save:result', (data) => {
+        if (data.success) {
+          showStatus('Model saved successfully', 'success');
+          socket.emit('model:list');
+        } else {
+          showStatus(`Error: ${data.error}`, 'error');
+        }
+      });
+
+      socket.on('model:delete:result', (data) => {
+        if (data.success) {
+          showStatus('Model deleted successfully', 'success');
+          socket.emit('model:list');
+
+          // Clear the form
+          newModelBtn.click();
+        } else {
+          showStatus(`Error: ${data.error}`, 'error');
+        }
+      });
+
+      socket.on('model:test:result', showModelTestResult);
+
+      socket.on('agent:settings:result', (data) => {
+        updateAgentSettings(data.settings);
+      });
+
+      socket.on('agent:settings:save:result', (data) => {
+        if (data.success) {
+          showStatus('Agent settings saved successfully', 'success');
+        } else {
+          showStatus(`Error: ${data.error}`, 'error');
+        }
+      });
+
+      socket.on('agent:stats:result', (data) => {
+        updateAgentStats(data.stats);
+      });
+
+      socket.on('agent:restart:result', (data) => {
+        if (data.success) {
+          showStatus('Agent restarted successfully', 'success');
+        } else {
+          showStatus(`Error: ${data.error}`, 'error');
+        }
+      });
+
+      socket.on('agent:config:import:result', (data) => {
+        if (data.success) {
+          showStatus('Config imported successfully', 'success');
+          // Reload everything
+          loadFunctions();
+        } else {
+          showStatus(`Import error: ${data.error}`, 'error');
+        }
+      });
+
+      // Connection status
+      socket.on('connect', () => {
+        showStatus('Connected to server', 'success');
+      });
+
+      socket.on('disconnect', () => {
+        showStatus('Disconnected from server', 'error');
+      });
+
+      socket.on('error', (error) => {
+        showStatus(`Connection error: ${error.message}`, 'error');
+      });
+    }
+  </script>
+</body>
+
+</html>

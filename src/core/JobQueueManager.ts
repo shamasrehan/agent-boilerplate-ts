@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 import IORedis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import MessagingManager from './MessagingManager';
+import FunctionManager from './FunctionManager';
 
 interface JobQueueOptions {
   concurrency?: number;
@@ -28,76 +29,83 @@ export class JobQueueManager extends EventEmitter {
   private redisConnection: IORedis;
   private options: JobQueueOptions;
   private messagingManager?: MessagingManager;
+  private functionManager?: FunctionManager;
 
-  /**
-   * Create a new JobQueueManager
-   * @param options Configuration options for the job queue
-   * @param messagingManager Optional messaging manager for job notifications
-   */
-  constructor(options: JobQueueOptions, messagingManager?: MessagingManager) {
-    super();
-    
-    this.options = {
-      concurrency: options.concurrency || 5,
-      retryAttempts: options.retryAttempts || 3,
-      retryDelay: options.retryDelay || 5000,
-      queueName: options.queueName || 'agent-job-queue',
-      notifyMessaging: options.notifyMessaging || false,
-      redis: options.redis || {
-        host: 'localhost',
-        port: 6379
-      }
-    };
-    
-    this.messagingManager = messagingManager;
-    
-    // Initialize Redis connection
-    this.redisConnection = new IORedis({
+/**
+ * Create a new JobQueueManager
+ * @param options Configuration options for the job queue
+ * @param messagingManager Optional messaging manager for job notifications
+ * @param functionManager Optional function manager for executing functions
+ */
+constructor(
+  options: JobQueueOptions, 
+  messagingManager?: MessagingManager,
+  functionManager?: FunctionManager
+) {
+  super();
+  
+  this.options = {
+    concurrency: options.concurrency || 5,
+    retryAttempts: options.retryAttempts || 3,
+    retryDelay: options.retryDelay || 5000,
+    queueName: options.queueName || 'agent-job-queue',
+    notifyMessaging: options.notifyMessaging || false,
+    redis: options.redis || {
+      host: 'localhost',
+      port: 6379
+    }
+  };
+  
+  this.messagingManager = messagingManager;
+  this.functionManager = functionManager;
+  
+  // Initialize Redis connection
+  this.redisConnection = new IORedis({
+    host: this.options.redis?.host ?? 'localhost',
+    port: this.options.redis?.port ?? 6379,
+    password: this.options.redis?.password,
+    maxRetriesPerRequest: null
+  });
+  
+  // Create the queue
+  this.queue = new Queue(this.options.queueName ?? 'agent-job-queue', {
+    connection: {
       host: this.options.redis?.host ?? 'localhost',
       port: this.options.redis?.port ?? 6379,
       password: this.options.redis?.password,
       maxRetriesPerRequest: null
-    });
-    
-    // Create the queue
-    this.queue = new Queue(this.options.queueName ?? 'agent-job-queue', {
+    }
+  });
+  
+  // Create the queue scheduler for delayed jobs
+  this.scheduler = new QueueEvents(this.options.queueName ?? 'agent-job-queue', {
+    connection: {
+      host: this.options.redis?.host ?? 'localhost',
+      port: this.options.redis?.port ?? 6379,
+      password: this.options.redis?.password,
+      maxRetriesPerRequest: null
+    }
+  });
+  
+  // Create and start the worker
+  this.worker = new Worker(
+    this.options.queueName ?? 'agent-job-queue',
+    this.processJob.bind(this),
+    {
       connection: {
         host: this.options.redis?.host ?? 'localhost',
         port: this.options.redis?.port ?? 6379,
         password: this.options.redis?.password,
         maxRetriesPerRequest: null
-      }
-    });
-    
-    // Create the queue scheduler for delayed jobs
-    this.scheduler = new QueueEvents(this.options.queueName ?? 'agent-job-queue', {
-      connection: {
-        host: this.options.redis?.host ?? 'localhost',
-        port: this.options.redis?.port ?? 6379,
-        password: this.options.redis?.password,
-        maxRetriesPerRequest: null
-      }
-    });
-    
-    // Create and start the worker
-    this.worker = new Worker(
-      this.options.queueName ?? 'agent-job-queue',
-      this.processJob.bind(this),
-      {
-        connection: {
-          host: this.options.redis?.host ?? 'localhost',
-          port: this.options.redis?.port ?? 6379,
-          password: this.options.redis?.password,
-          maxRetriesPerRequest: null
-        },
-        concurrency: this.options.concurrency,
-        autorun: true
-      }
-    );
-    
-    // Set up event listeners
-    this.setupEventListeners();
-  }
+      },
+      concurrency: this.options.concurrency,
+      autorun: true
+    }
+  );
+  
+  // Set up event listeners
+  this.setupEventListeners();
+}
 
   /**
    * Setup event listeners for the worker
@@ -154,48 +162,66 @@ export class JobQueueManager extends EventEmitter {
     });
   }
 
-  /**
-   * Process a job from the queue
-   * @param job The job to process
-   */
-  private async processJob(job: BullJob): Promise<any> {
-    try {
-      // Extract the job data
-      const jobData = job.data as Job;
+/**
+ * Process a job from the queue
+ * @param job The job to process
+ */
+private async processJob(job: BullJob): Promise<any> {
+  try {
+    // Extract the job data
+    const jobData = job.data as Job;
+    
+    console.log(`Processing job ${job.id}: ${jobData.name}`);
+    
+    // Check if this job should call a specific function from FunctionManager
+    if (jobData.data.useFunctionManager === true && jobData.data.functionName) {
+      // Handle function execution via FunctionManager
+      const functionName = jobData.data.functionName;
+      const functionParams = jobData.data.functionParams || {};
+      const functionContext = jobData.data.functionContext || { source: 'job', jobId: job.id };
       
-      // Log job start
-      console.log(`Processing job ${job.id}: ${jobData.name}`);
-      
-      // Execute the job handler function
-      if (typeof jobData.data.handler === 'function') {
-        // If the job data contains a handler function, execute it
-        return await jobData.data.handler(jobData.data.params);
-      } else if (typeof jobData.name === 'string' && jobData.name.includes('.')) {
-        // If the job name is in format 'moduleName.functionName', try to dynamically import and execute
-        const [moduleName, functionName] = jobData.name.split('.');
-        
-        try {
-          // Dynamically import the module
-          const module = await import(`../functions/${moduleName}`);
-          
-          // Check if the function exists in the module
-          if (module[functionName] && typeof module[functionName] === 'function') {
-            return await module[functionName](jobData.data);
-          } else {
-            throw new Error(`Function ${functionName} not found in module ${moduleName}`);
-          }
-        } catch (importError) {
-          console.error(`Failed to import or execute ${jobData.name}:`, importError);
-          throw importError;
-        }
-      } else {
-        throw new Error(`Invalid job handler for job ${job.id}`);
+      // Check if FunctionManager is available
+      if (!this.functionManager) {
+        throw new Error('Function Manager not available for job execution');
       }
-    } catch (error) {
-      console.error(`Error processing job ${job.id}:`, error);
-      throw error;
+      
+      // Execute the function and return the result
+      return await this.functionManager.executeFunction(
+        functionName,
+        functionParams,
+        functionContext
+      );
+    } 
+    // Otherwise, execute the job handler function like before
+    else if (typeof jobData.data.handler === 'function') {
+      // If the job data contains a handler function, execute it
+      return await jobData.data.handler(jobData.data.params);
+    } else if (typeof jobData.name === 'string' && jobData.name.includes('.')) {
+      // If the job name is in format 'moduleName.functionName', try to dynamically import and execute
+      const [moduleName, functionName] = jobData.name.split('.');
+      
+      try {
+        // Dynamically import the module
+        const module = await import(`../functions/${moduleName}`);
+        
+        // Check if the function exists in the module
+        if (module[functionName] && typeof module[functionName] === 'function') {
+          return await module[functionName](jobData.data);
+        } else {
+          throw new Error(`Function ${functionName} not found in module ${moduleName}`);
+        }
+      } catch (importError) {
+        console.error(`Failed to import or execute ${jobData.name}:`, importError);
+        throw importError;
+      }
+    } else {
+      throw new Error(`Invalid job handler for job ${job.id}`);
     }
+  } catch (error) {
+    console.error(`Error processing job ${job.id}:`, error);
+    throw error;
   }
+}
 
   /**
    * Add a job to the queue

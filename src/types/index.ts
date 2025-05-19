@@ -8,6 +8,8 @@ export interface FunctionDefinition {
   description: string;
   type: 'local' | 'cloud';
   apiKeyName?: string;
+  preferredModelId?: string; // New field for preferred LLM model
+  customPrompt?: string; // New field for function-specific prompt
   parameters: {
     type: 'object';
     properties: Record<string, any>;
@@ -25,6 +27,12 @@ export interface FunctionContext {
   apiKey?: string;
   userId?: string;
   sessionId?: string;
+  llm?: { // New field for LLM context
+    manager?: any;
+    modelId?: string;
+  };
+  messageId?: string; // For tracking the source message
+  messageType?: string; // The type of the source message
   [key: string]: any;
 }
 
@@ -110,6 +118,10 @@ export interface LLMConfig {
   responseFormat?: 'text' | 'json_object';
 }
 
+export interface ModelRegistry {
+  [modelId: string]: LLMConfig;
+}
+
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant' | 'function';
   content: string;
@@ -156,5 +168,6 @@ export interface AgentConfig {
   llm?: {
     enabled: boolean;
     config?: LLMConfig;
+    models?: Record<string, LLMConfig>; // New field for model registry
   };
 }
