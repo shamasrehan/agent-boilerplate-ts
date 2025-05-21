@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Server</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+      color: #333;
+    }
+    h1 {
+      color: #2563eb;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 10px;
+    }
+    .status {
+      background-color: #f3f4f6;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .status.success {
+      background-color: #d1fae5;
+      border-left: 4px solid #10b981;
+    }
+    .status.error {
+      background-color: #fee2e2;
+      border-left: 4px solid #ef4444;
+    }
+    code {
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      background-color: #f3f4f6;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 90%;
+    }
+    pre {
+      background-color: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    .endpoints {
+      margin-top: 30px;
+    }
+    .endpoint {
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 15px;
+    }
+    .method {
+      display: inline-block;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    .get {
+      background-color: #dbeafe;
+      color: #2563eb;
+    }
+    .post {
+      background-color: #d1fae5;
+      color: #059669;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Agent Server</h1>
+  
+  <div class="status success">
+    <strong>Server Status:</strong> Running
+  </div>
+  
+  <p>
+    This is the AI Agent server. To interact with the agent, you can:
+  </p>
+  
+  <ul>
+    <li>Use the <a href="/dashboard">Dashboard UI</a></li>
+    <li>Connect via Socket.IO</li>
+    <li>Send HTTP requests to the API endpoints</li>
+  </ul>
+  
+  <div class="endpoints">
+    <h2>API Endpoints</h2>
+    
+    <div class="endpoint">
+      <div>
+        <span class="method post">POST</span>
+        <code>/api/message</code>
+      </div>
+      <p>Send a message to the agent</p>
+      <strong>Request Body:</strong>
+      <pre>{
+  "intent": "REQUEST",
+  "action": "READ",
+  "entity": {
+    "type": "ENTITY_TYPE",
+    "context": {
+      "description": "Description of the request"
+    }
+  }
+}</pre>
+    </div>
+    
+    <div class="endpoint">
+      <div>
+        <span class="method post">POST</span>
+        <code>/api/function</code>
+      </div>
+      <p>Execute a function directly</p>
+      <strong>Request Body:</strong>
+      <pre>{
+  "name": "functionName",
+  "params": {
+    // Function parameters
+  },
+  "context": {
+    // Execution context
+  }
+}</pre>
+    </div>
+    
+    <div class="endpoint">
+      <div>
+        <span class="method post">POST</span>
+        <code>/api/job</code>
+      </div>
+      <p>Schedule a job</p>
+      <strong>Request Body:</strong>
+      <pre>{
+  "name": "jobName",
+  "data": {
+    // Job data
+  },
+  "options": {
+    "priority": 5,
+    "delay": 0,
+    "attempts": 3
+  }
+}</pre>
+    </div>
+    
+    <div class="endpoint">
+      <div>
+        <span class="method get">GET</span>
+        <code>/api/job/:id</code>
+      </div>
+      <p>Get job status</p>
+    </div>
+  </div>
+  
+  <p>
+    For more information, refer to the <a href="https://github.com/yourusername/ai-agent-boilerplate">documentation</a>.
+  </p>
+  
+  <script>
+    // Check if the server is actually running
+    fetch('/api/status')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Server not responding properly');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Server status:', data);
+      })
+      .catch(error => {
+        const statusEl = document.querySelector('.status');
+        statusEl.classList.remove('success');
+        statusEl.classList.add('error');
+        statusEl.innerHTML = '<strong>Server Status:</strong> Error - ' + error.message;
+      });
+  </script>
+</body>
+</html>
