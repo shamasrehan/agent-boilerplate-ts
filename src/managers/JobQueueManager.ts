@@ -3,7 +3,6 @@ import { Job, JobResult, JobStatus } from '../types';
 import { EventEmitter } from 'events';
 import IORedis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
-import MessagingManager from './MessagingManager';
 
 interface JobQueueOptions {
   concurrency?: number;
@@ -27,14 +26,12 @@ export class JobQueueManager extends EventEmitter {
   private scheduler: QueueEvents;
   private redisConnection: IORedis;
   private options: JobQueueOptions;
-  private messagingManager?: MessagingManager;
 
   /**
    * Create a new JobQueueManager
    * @param options Configuration options for the job queue
-   * @param messagingManager Optional messaging manager for job notifications
    */
-  constructor(options: JobQueueOptions, messagingManager?: MessagingManager) {
+  constructor(options: JobQueueOptions) {
     super();
     
     this.options = {
@@ -49,8 +46,6 @@ export class JobQueueManager extends EventEmitter {
       }
     };
     
-    this.messagingManager = messagingManager;
-    
     // Initialize Redis connection
     this.redisConnection = new IORedis({
       host: this.options.redis?.host ?? 'localhost',
@@ -61,22 +56,12 @@ export class JobQueueManager extends EventEmitter {
     
     // Create the queue
     this.queue = new Queue(this.options.queueName ?? 'agent-job-queue', {
-      connection: {
-        host: this.options.redis?.host ?? 'localhost',
-        port: this.options.redis?.port ?? 6379,
-        password: this.options.redis?.password,
-        maxRetriesPerRequest: null
-      }
+      connection: this.redisConnection
     });
     
     // Create the queue scheduler for delayed jobs
     this.scheduler = new QueueEvents(this.options.queueName ?? 'agent-job-queue', {
-      connection: {
-        host: this.options.redis?.host ?? 'localhost',
-        port: this.options.redis?.port ?? 6379,
-        password: this.options.redis?.password,
-        maxRetriesPerRequest: null
-      }
+      connection: this.redisConnection
     });
     
     // Create and start the worker
@@ -84,12 +69,7 @@ export class JobQueueManager extends EventEmitter {
       this.options.queueName ?? 'agent-job-queue',
       this.processJob.bind(this),
       {
-        connection: {
-          host: this.options.redis?.host ?? 'localhost',
-          port: this.options.redis?.port ?? 6379,
-          password: this.options.redis?.password,
-          maxRetriesPerRequest: null
-        },
+        connection: this.redisConnection,
         concurrency: this.options.concurrency,
         autorun: true
       }
@@ -112,18 +92,9 @@ export class JobQueueManager extends EventEmitter {
       };
       
       this.emit('job:completed', jobResult);
-      
-      // Notify via messaging if configured
-      if (this.options.notifyMessaging && this.messagingManager) {
-        await this.messagingManager.sendMessage(
-          'job:completed',
-          jobResult,
-          job.id
-        );
-      }
     });
     
-    this.worker.on('failed', (job: BullJob | undefined, error: Error, prev: string) => {
+    this.worker.on('failed', (job: BullJob | undefined, error: Error) => {
       if (!job) return;
       const jobResult: JobResult = {
         jobId: job.id || '',
@@ -134,15 +105,6 @@ export class JobQueueManager extends EventEmitter {
       };
       
       this.emit('job:failed', jobResult);
-      
-      // Notify via messaging if configured
-      if (this.options.notifyMessaging && this.messagingManager) {
-        this.messagingManager.sendMessage(
-          'job:failed',
-          jobResult,
-          job.id
-        );
-      }
     });
     
     this.worker.on('active', (job: BullJob) => {
@@ -167,6 +129,7 @@ export class JobQueueManager extends EventEmitter {
       console.log(`Processing job ${job.id}: ${jobData.name}`);
       
       // Execute the job handler function
+      // Execute the job handler function
       if (typeof jobData.data.handler === 'function') {
         // If the job data contains a handler function, execute it
         return await jobData.data.handler(jobData.data.params);
@@ -176,7 +139,8 @@ export class JobQueueManager extends EventEmitter {
         
         try {
           // Dynamically import the module
-          const module = await import(`../functions/${moduleName}`);
+          const modulePath = `../functions/${moduleName}`;
+          const module = require(modulePath);
           
           // Check if the function exists in the module
           if (module[functionName] && typeof module[functionName] === 'function') {
@@ -278,119 +242,6 @@ export class JobQueueManager extends EventEmitter {
     }
     
     return job.returnvalue;
-  }
-
-  /**
-   * Remove a job from the queue
-   * @param jobId The ID of the job to remove
-   */
-  public async removeJob(jobId: string): Promise<void> {
-    const job = await this.queue.getJob(jobId);
-    
-    if (job) {
-      await job.remove();
-    }
-  }
-
-  /**
-   * Promote a delayed job to be executed immediately
-   * @param jobId The ID of the job to promote
-   */
-  public async promoteJob(jobId: string): Promise<void> {
-    const job = await this.queue.getJob(jobId);
-    
-    if (job) {
-      await job.promote();
-    }
-  }
-
-  /**
-   * Update the priority of a job
-   * @param jobId The ID of the job to update
-   * @param priority The new priority value (lower is higher priority)
-   */
-  public async updateJobPriority(jobId: string, priority: number): Promise<void> {
-    const job = await this.queue.getJob(jobId);
-    
-    if (job) {
-      await job.changePriority(priority);
-    }
-  }
-
-  /**
-   * Get all jobs with a specific status
-   * @param status The status to filter by
-   * @param limit Maximum number of jobs to return
-   * @param offset Offset for pagination
-   */
-  public async getJobsByStatus(
-    status: JobStatus,
-    limit: number = 100,
-    offset: number = 0
-  ): Promise<Job[]> {
-    let jobs: BullJob[] = [];
-    
-    switch (status) {
-      case JobStatus.WAITING:
-        jobs = await this.queue.getWaiting(offset, offset + limit);
-        break;
-      case JobStatus.ACTIVE:
-        jobs = await this.queue.getActive(offset, offset + limit);
-        break;
-      case JobStatus.COMPLETED:
-        jobs = await this.queue.getCompleted(offset, offset + limit);
-        break;
-      case JobStatus.FAILED:
-        jobs = await this.queue.getFailed(offset, offset + limit);
-        break;
-      case JobStatus.DELAYED:
-        jobs = await this.queue.getDelayed(offset, offset + limit);
-        break;
-      default:
-        return [];
-    }
-    
-    return jobs.map(job => ({
-      id: job.id || '',
-      name: job.name,
-      data: job.data.data
-    }));
-  }
-
-  /**
-   * Get all jobs in the queue
-   * @param limit Maximum number of jobs to return
-   * @param offset Offset for pagination
-   */
-  public async getAllJobs(limit: number = 100, offset: number = 0): Promise<Job[]> {
-    const jobs = await this.queue.getJobs([], offset, offset + limit);
-    
-    return jobs.map(job => ({
-      id: job.id || '',
-      name: job.name,
-      data: job.data.data
-    }));
-  }
-
-  /**
-   * Pause the queue processing
-   */
-  public async pause(): Promise<void> {
-    await this.queue.pause();
-  }
-
-  /**
-   * Resume the queue processing
-   */
-  public async resume(): Promise<void> {
-    await this.queue.resume();
-  }
-
-  /**
-   * Empty the queue (remove all jobs)
-   */
-  public async empty(): Promise<void> {
-    await this.queue.obliterate({ force: true });
   }
 
   /**

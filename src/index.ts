@@ -1,5 +1,6 @@
 import { Agent } from './Agent';
-import { AgentConfig } from './types';
+import { createApiRouter } from './apiRoutes';
+import { AgentConfig, LLMMessage } from './types';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import express from 'express';
@@ -14,7 +15,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
-// Serve static files
+// Middleware
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.json());
 
@@ -56,6 +57,23 @@ const defaultConfig: AgentConfig = {
 // Create and initialize the agent
 const agent = new Agent(defaultConfig);
 
+// Set up API routes
+app.use('/api', createApiRouter(agent));
+
+// Set up routes
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
+});
+
+app.get('/server', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'server.html'));
+});
+
+// Default route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
 // Set up WebSocket for testing UI
 io.on('connection', (socket) => {
   console.log('Client connected');
@@ -94,6 +112,82 @@ io.on('connection', (socket) => {
           payload.payload || {},
           payload.metadata || {}
         );
+      } else if (payload.intent) {
+        // Standard agent message format with intent/action/entity
+        // Process with LLM to determine what to do
+        const llmManager = agent.getLLMManager();
+        
+        if (!llmManager) {
+          throw new Error('LLM Manager not initialized');
+        }
+        
+        // Format message for LLM to interpret
+        const messages: LLMMessage[] = [
+          {
+            role: 'system',
+            content: `You are an AI Agent that can execute functions and schedule jobs. 
+                     When you receive a message with intent/action/entity, analyze it to determine:
+                     1. If a function should be called directly, which one and with what parameters
+                     2. If a job should be scheduled, which one and with what data
+                     3. If a general response should be generated
+                     
+                     Available functions: ${agent.getFunctionManager()?.listFunctions().join(', ') || 'None'}`
+          },
+          {
+            role: 'user',
+            content: JSON.stringify(payload)
+          }
+        ];
+        
+        // Get LLM interpretation
+        const llmResponse = await llmManager.sendMessage(messages);
+        
+        // Attempt to extract function/job calls from response
+        try {
+          const content = JSON.parse(llmResponse.content);
+          
+          if (content.action === 'call_function' && content.function) {
+            // Execute the function
+            response = await agent.executeFunction(
+              content.function,
+              content.parameters || {},
+              content.context || {}
+            );
+          } else if (content.action === 'schedule_job' && content.job) {
+            // Schedule the job
+            response = await agent.scheduleJob(
+              content.job,
+              content.data || {},
+              content.options || {}
+            );
+          } else {
+            // Use the LLM response directly
+            response = {
+              intent: "INFORM",
+              action: "READ",
+              entity: {
+                type: "AGENT",
+                context: {
+                  description: "Response from AI Agent",
+                  data: content
+                }
+              }
+            };
+          }
+        } catch (e) {
+          // If can't parse LLM response as JSON, wrap the text response
+          response = {
+            intent: "INFORM",
+            action: "READ",
+            entity: {
+              type: "AGENT",
+              context: {
+                description: "Response from AI Agent",
+                data: llmResponse.content
+              }
+            }
+          };
+        }
       } else {
         // Default to LLM generation if enabled
         if (agent.getLLMManager()) {
@@ -101,6 +195,19 @@ io.on('connection', (socket) => {
             typeof data === 'string' ? data : JSON.stringify(payload, null, 2),
             payload.options || {}
           );
+          
+          // Format the response
+          response = {
+            intent: "INFORM",
+            action: "READ",
+            entity: {
+              type: "AGENT",
+              context: {
+                description: "Response from AI Agent",
+                data: response
+              }
+            }
+          };
         } else {
           response = { error: 'LLM not enabled and message type not recognized' };
         }

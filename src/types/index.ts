@@ -1,38 +1,4 @@
-/**
- * Core types and interfaces for the AI Agent Boilerplate
- */
-
-// Function Manager Types
-export interface FunctionDefinition {
-  name: string;
-  description: string;
-  type: 'local' | 'cloud';
-  apiKeyName?: string;
-  parameters: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: string[];
-  };
-  handler: FunctionHandler;
-}
-
-export type FunctionHandler = (
-  params: Record<string, any>,
-  context?: FunctionContext
-) => Promise<any>;
-
-export interface FunctionContext {
-  apiKey?: string;
-  userId?: string;
-  sessionId?: string;
-  [key: string]: any;
-}
-
-export interface FunctionRegistry {
-  [key: string]: FunctionDefinition;
-}
-
-// Messaging Manager Types
+// Base types
 export interface MessageConfig {
   exchange?: string;
   incomingQueue: string;
@@ -62,9 +28,39 @@ export interface MessageSchema {
   schema: Record<string, any>;
 }
 
-// Job Queue Types
+// Function types
+export interface FunctionDefinition {
+  name: string;
+  description: string;
+  type: 'local' | 'cloud';
+  apiKeyName?: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+  handler: FunctionHandler;
+}
+
+export type FunctionHandler = (
+  params: Record<string, any>,
+  context?: FunctionContext
+) => Promise<any>;
+
+export interface FunctionContext {
+  apiKey?: string;
+  userId?: string;
+  sessionId?: string;
+  [key: string]: any;
+}
+
+export interface FunctionRegistry {
+  [key: string]: FunctionDefinition;
+}
+
+// Job types
 export interface Job {
-  id: string;
+  id?: string;
   name: string;
   data: any;
   priority?: number;
@@ -96,7 +92,7 @@ export enum JobStatus {
   PAUSED = 'paused',
 }
 
-// LLM Manager Types
+// LLM types
 export interface LLMConfig {
   provider: 'openai' | 'anthropic' | 'google';
   model: string;
@@ -135,7 +131,7 @@ export interface LLMResponse {
   }>;
 }
 
-// Agent Configuration
+// Agent types
 export interface AgentConfig {
   name: string;
   version: string;
